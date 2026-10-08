@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>日本海 出航判定</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="出航判定">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#EDF2F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B1A20" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+/* レイアウト: 上に地点バー(固定)。本文は1カラムで「次の出航チャンス」→7日ぶんの行→潮時表→基準。地点選びは下から出るシート。 */
+:root{
+  --bg:#EDF2F1; --surface:#FFFFFF; --ink:#0F2730; --muted:#5B6F75; --line:#D3DEDD;
+  --go:#17865A; --go-soft:#D5EFE2; --ok:#B77A00; --ok-soft:#F8E7BD; --no:#BF3B2A; --no-soft:#F4D6D0;
+  --night:#DCE4E3; --accent:#0B5F78; --tide:#1F6FA8; --tide-soft:#D3E5F2; --star:#D39A00;
+  --jp:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Yu Gothic",Meiryo,sans-serif;
+  --num:"Avenir Next Condensed","DIN Alternate","Helvetica Neue","Arial Narrow",var(--jp);
+}
+@media (prefers-color-scheme: dark){ :root{
+  --bg:#0B1A20; --surface:#12262E; --ink:#E6EFEE; --muted:#93A8AD; --line:#24404A;
+  --go:#4CC690; --go-soft:#123D2E; --ok:#E8B040; --ok-soft:#44360F; --no:#F0806E; --no-soft:#4A1F19;
+  --night:#1A2F37; --accent:#6CC4DD; --tide:#7DB9E8; --tide-soft:#17384F; --star:#F0C040; color-scheme:dark } }
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--jp);font-size:15px;line-height:1.6}
+[hidden]{display:none!important}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums;letter-spacing:.01em}
+
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:calc(8px + env(safe-area-inset-top,0px)) 16px 8px}
+.bar .in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:8px}
+.placebtn{flex:1;min-width:0;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 12px;display:flex;flex-direction:column;line-height:1.3}
+.placebtn .k{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.08em}
+.placebtn .v{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon{width:44px;height:44px;flex:none;background:var(--surface);border:1px solid var(--line);border-radius:6px;display:grid;place-items:center;padding:0}
+.icon svg{width:22px;height:22px;fill:none;stroke:var(--ink);stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.icon.on svg{fill:var(--star);stroke:var(--star)}
+.icon.spin svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){ .icon.spin svg{animation:none} }
+
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:16px calc(40px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:18px}
+.next{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.next .label{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.12em}
+.next .big{font-size:28px;font-weight:800;line-height:1.25}
+.next .big .num{font-size:34px;font-weight:600;white-space:nowrap;display:inline-block}
+.next.go .big{color:var(--go)} .next.ok .big{color:var(--ok)} .next.no .big{color:var(--no)}
+.next .sub{font-size:14px}
+.stale{background:var(--no-soft);border-left:4px solid var(--no);padding:10px 12px;font-size:14px;font-weight:500}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:6px;padding:22px 18px;color:var(--muted)}
+
+.days{display:flex;flex-direction:column;gap:8px}
+details.day{background:var(--surface);border:1px solid var(--line);border-radius:6px}
+details.day.wkend{border-color:var(--accent)}
+summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+summary::-webkit-details-marker{display:none}
+.head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.date{font-size:20px;font-weight:600}
+.date small{font-family:var(--jp);font-size:14px;font-weight:700;margin-left:2px}
+.pill{font-size:12px;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.pill.go{background:var(--go-soft);color:var(--go)} .pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.no{background:var(--no-soft);color:var(--no)}
+.win{font-size:15px;font-weight:700}
+.win .num{font-size:18px;font-weight:500}
+.extra{font-size:13px;color:var(--muted);margin:0}
+.open{margin-left:auto;font-size:12px;color:var(--accent);font-weight:700}
+details[open] .open .a{display:none} details:not([open]) .open .b{display:none}
+.strip{display:grid;grid-template-columns:repeat(16,1fr);gap:2px}
+.cell{height:22px;border-radius:2px;background:var(--night)}
+.cell.go{background:var(--go)} .cell.ok{background:var(--ok)} .cell.no{background:var(--no)}
+.cell.gone{opacity:.35}
+.ticks{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;font-size:11px;color:var(--muted);margin-top:-4px}
+.tide{display:block;width:100%;height:34px;margin-top:-2px}
+.tide .area{fill:var(--tide-soft)} .tide .curve{fill:none;stroke:var(--tide);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.tide .dark{fill:var(--night);opacity:.7}
+.facts{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:13px;margin:0}
+.facts b{font-weight:700;color:var(--muted);font-size:11px;letter-spacing:.06em;margin-right:4px}
+.facts .num{font-size:15px}
+.facts .shio{font-weight:700;color:var(--tide)}
+
+.tablebox{overflow-x:auto;border-top:1px solid var(--line);padding:4px 10px 12px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+table.hourly{min-width:520px}
+th{font-size:11px;font-weight:700;color:var(--muted);text-align:right;padding:8px 4px 4px;white-space:nowrap}
+td{padding:5px 4px;border-top:1px solid var(--line);text-align:right;white-space:nowrap}
+.hourly th:first-child,.hourly th:nth-child(2),.hourly th:last-child,.hourly td:first-child,.hourly td:nth-child(2),.hourly td:last-child{text-align:left}
+td.num{font-size:16px}
+tr.night td{color:var(--muted)}
+.over{color:var(--no);font-weight:600}
+.mark{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;background:var(--night)}
+.mark.go{background:var(--go)} .mark.ok{background:var(--ok)} .mark.no{background:var(--no)}
+.flag{font-size:11px;font-weight:700;color:var(--no);margin-right:4px}
+.sun{font-size:12px;color:var(--muted);margin:8px 0 0}
+.sec h2,.rules h2{font-size:13px;font-weight:700;margin:0 0 6px;letter-spacing:.08em}
+.sec .tablebox{border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:2px 10px 8px}
+.sec td,.sec th{text-align:left}
+.sec td{white-space:pre-line;vertical-align:top}
+.sec td.num{font-size:14px}
+.rules{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:10px}
+.rules h2{color:var(--ink);margin:0}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--ink)}
+.rules ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+.rules p{margin:0;max-width:65ch}
+.setrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+select,input[type=text]{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:16px}
+
+/* 地点を選ぶシート */
+.sheet{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+.sheet .top{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.sheet h2{font-size:17px;margin:0;flex:1}
+.textbtn{background:none;border:0;color:var(--accent);font-weight:700;padding:10px 4px;font-size:15px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 16px}
+.tabs button{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:9px 4px;font-weight:700;font-size:14px}
+.tabs button[aria-selected=true]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.pane{flex:1;min-height:0;overflow-y:auto;padding:4px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+.pane h3{font-size:12px;color:var(--muted);letter-spacing:.1em;margin:14px 0 6px}
+.list{display:flex;flex-direction:column;gap:6px}
+.item{display:flex;align-items:stretch;gap:6px}
+.item .go{flex:1;min-width:0;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-size:16px;font-weight:700}
+.item .go small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.item .go.cur{border-color:var(--accent)}
+.item .del{width:44px;background:var(--surface);border:1px solid var(--line);border-radius:6px;color:var(--no);font-weight:700}
+.prefs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.prefs button{background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:6px 12px;font-size:14px}
+.prefs button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+#mappane{display:flex;flex-direction:column;gap:10px;padding-top:0}
+#map{flex:1;min-height:260px;border:1px solid var(--line);border-radius:6px;background:var(--night)}
+.mapform{display:flex;flex-direction:column;gap:8px}
+.mapform .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mapform input[type=text]{flex:1;min-width:0}
+.primary{background:var(--accent);color:var(--bg);border:0;border-radius:6px;padding:12px 16px;font-weight:800;font-size:16px}
+.primary:disabled{opacity:.45}
+.hint{font-size:13px;color:var(--muted);margin:0}
+</style>
+</head>
+<body>
+<div class="bar"><div class="in">
+  <button class="placebtn" id="placebtn" type="button"><span class="k">地点(タップで変更)</span><span class="v" id="placename">—</span></button>
+  <button class="icon" id="favbtn" type="button" aria-label="お気に入りに登録"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.600l1-5.800L3.500 9.700l5.900-.800z"/></svg></button>
+  <button class="icon" id="reload" type="button" aria-label="予報を更新"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.6-5.900"/><path d="M20 4v5h-5"/></svg></button>
+</div></div>
+
+<main class="wrap">
+  <div id="stale" class="stale" hidden></div>
+  <section id="next" class="next" hidden></section>
+  <div id="empty" class="empty">予報を読み込んでいます。</div>
+  <section id="days" class="days"></section>
+  <section class="sec" id="tidesec" hidden>
+    <h2>潮時表</h2>
+    <div class="tablebox"><table id="tidetable"></table></div>
+  </section>
+  <section class="rules">
+    <h2>この地点の設定</h2>
+    <div class="setrow"><label for="bearing">海の方角(岸から見て海がある向き)</label>
+      <select id="bearing"></select></div>
+    <p>出し風(陸から沖へ吹く風)の判定に使います。地点リストの値は目安なので、実際の浜の向きに合わせて直してください。</p>
+    <h2>判定の基準(2馬力ゴムボート向け)</h2>
+    <div class="legend">
+      <span><i class="mark go"></i>出航可 風5m/s以下・波0.5m以下</span>
+      <span><i class="mark ok"></i>要注意 風8m/s以下・波0.7m以下(短時間・岸寄りのみ)</span>
+      <span><i class="mark no"></i>中止 それを超える、または雷</span>
+      <span><i class="mark"></i>夜(日の出前・日没後)</span>
+    </div>
+    <ul>
+      <li>時間帯は、2時間以上つづく場合だけ表示します。</li>
+      <li>突風が8m/sを超える時間は、風と波が基準内でも「要注意」に下げます。</li>
+      <li>出し風は風が弱くても沖へ流されます。岸を離れすぎないでください。</li>
+      <li>波の周期が4秒未満で波高0.4m以上のときは「波が細かい」と表示します。船が叩かれやすい状態です。</li>
+      <li>うねりが周期8秒以上・高さ0.3m以上のときは「うねり」と表示します。沖では穏やかでも、浜の波打ち際で急に立ち上がります。判定の「波」は、うねりと風波を合わせた高さです。</li>
+      <li>青い線は潮位の動きで、色の帯と同じ時刻(4〜19時)に並んでいます。潮位は平均海面からの高さ(cm)の予測で、満潮・干潮の時刻は10〜20分ほどずれることがあります。</li>
+    </ul>
+    <p>数値は Open-Meteo の予報(計算値)で、岬の陰や地形の影響までは反映されません。出航前に、最新の海上予報と現地の海面を必ず自分の目で確認してください。</p>
+    <p id="meta"></p>
+  </section>
+</main>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="top"><h2>地点を選ぶ</h2><button class="textbtn" id="closesheet" type="button">閉じる</button></div>
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" data-tab="fav">お気に入り</button>
+    <button type="button" role="tab" data-tab="list">地点リスト</button>
+    <button type="button" role="tab" data-tab="map">地図で選ぶ</button>
+  </div>
+  <div class="pane" id="favpane"></div>
+  <div class="pane" id="listpane" hidden></div>
+  <div class="pane" id="mappane" hidden>
+    <p class="hint">地図をタップすると、その場所にピンが立ちます。丸印は地点リストの場所です。海の上か、海岸ぎりぎりを選んでください。</p>
+    <div id="map"></div>
+    <div class="mapform">
+      <div class="row"><input type="text" id="pinname" placeholder="地点の名前(例: いつもの浜)" maxlength="20" aria-label="地点の名前">
+        <select id="pinbearing" aria-label="海の方角"></select></div>
+      <button class="primary" id="usepin" type="button" disabled>地図をタップして場所を選ぶ</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+"use strict";
+/* ---------- 地点リスト: [県, 名前, 緯度, 経度, 海の方角(度)] ---------- */
+var PRESETS = [
+["北海道","稚内",45.410,141.680,0],["北海道","留萌",43.950,141.635,280],["北海道","石狩",43.220,141.300,320],["北海道","小樽",43.200,141.010,30],["北海道","余市",43.200,140.790,0],["北海道","岩内",42.985,140.505,280],["北海道","寿都",42.795,140.230,0],["北海道","瀬棚",42.455,139.845,270],["北海道","江差",41.870,140.120,270],["北海道","松前",41.425,140.105,200],
+["青森","小泊",41.133,140.300,270],["青森","鰺ヶ沢",40.783,140.205,350],["青森","深浦",40.647,139.927,290],
+["秋田","八森",40.370,140.015,270],["秋田","能代",40.213,140.000,270],["秋田","男鹿・戸賀",39.955,139.713,270],["秋田","男鹿・船川",39.880,139.850,160],["秋田","秋田港",39.755,140.050,270],["秋田","本荘",39.385,140.020,270],["秋田","象潟",39.213,139.895,270],
+["山形","吹浦",39.073,139.872,270],["山形","酒田",38.930,139.815,280],["山形","由良",38.722,139.682,290],["山形","鼠ヶ関",38.560,139.545,290],
+["新潟","岩船",38.185,139.430,290],["新潟","新潟西港",37.950,139.065,320],["新潟","寺泊",37.640,138.765,300],["新潟","柏崎",37.375,138.545,320],["新潟","直江津",37.185,138.250,350],["新潟","能生",37.100,137.990,350],["新潟","糸魚川",37.045,137.850,350],["新潟","佐渡・両津",38.085,138.440,90],["新潟","佐渡・相川",38.030,138.235,270],["新潟","佐渡・小木",37.815,138.280,180],
+["富山","朝日・宮崎",36.970,137.585,350],["富山","黒部・生地",36.895,137.415,320],["富山","魚津",36.825,137.395,310],["富山","富山・岩瀬",36.765,137.225,0],["富山","新湊",36.780,137.110,0],["富山","氷見",36.860,136.995,70],
+["石川","珠洲・飯田",37.435,137.265,110],["石川","能登・宇出津",37.305,137.150,120],["石川","七尾",37.055,136.970,30],["石川","輪島",37.405,136.900,350],["石川","富来",37.150,136.720,280],["石川","羽咋・柴垣",36.940,136.760,280],["石川","金沢港",36.615,136.600,310],["石川","美川",36.490,136.490,310],["石川","加賀・橋立",36.350,136.310,320],
+["福井","三国",36.225,136.135,300],["福井","鷹巣",36.150,136.085,300],["福井","鮎川(国見)",36.0857,136.0312,300],["福井","越前・厨",35.965,135.985,280],["福井","河野",35.840,136.060,270],["福井","敦賀",35.665,136.065,350],["福井","美浜・早瀬",35.625,135.905,350],["福井","小浜",35.505,135.740,330],["福井","高浜",35.495,135.550,350],
+["京都","舞鶴",35.480,135.385,0],["京都","宮津",35.540,135.200,40],["京都","伊根",35.675,135.290,130],["京都","丹後・中浜",35.760,135.195,350],["京都","網野・浅茂川",35.690,135.020,340],
+["兵庫","津居山",35.650,134.830,0],["兵庫","香住",35.640,134.630,0],["兵庫","浜坂",35.630,134.455,350],
+["鳥取","岩美・網代",35.590,134.300,350],["鳥取","鳥取・賀露",35.540,134.185,350],["鳥取","泊",35.520,133.940,350],["鳥取","赤碕",35.520,133.650,350],["鳥取","境港",35.545,133.250,60],
+["島根","七類",35.575,133.230,10],["島根","恵曇",35.530,132.975,330],["島根","大社",35.400,132.670,280],["島根","大田・久手",35.215,132.510,320],["島根","浜田",34.890,132.065,320],["島根","益田",34.700,131.820,330],["島根","隠岐・西郷",36.200,133.330,150],
+["山口","須佐",34.630,131.600,330],["山口","萩",34.430,131.400,330],["山口","仙崎",34.395,131.200,10],["山口","特牛",34.320,130.895,270],["山口","下関・吉見",34.070,130.895,270]
+].map(function(a){ return { id:"p:"+a[0]+a[1], pref:a[0], name:a[1], lat:a[2], lon:a[3], b:a[4] }; });
+var DEFAULT_ID = "p:福井鮎川(国見)";
+
+/* ---------- 判定ロジック ---------- */
+var LIMITS = { goWind:5, goWave:0.5, okWind:8, okWave:0.7, gust:8, swellSec:8, swellM:0.3, offSpread:70, offMin:2 };
+var DIRS = ["北","北東","東","南東","南","南西","西","北西"];
+function dirName(deg){ return DIRS[Math.round((((deg % 360) + 360) % 360) / 45) % 8]; }
+function hm(s){ var p = s.split(":"); return +p[0] + (+p[1]) / 60; }
+function judgeHour(ws, wh, wc, wg){
+  if (wc >= 95) return "no";
+  if (ws <= LIMITS.goWind && wh <= LIMITS.goWave && !(wg > LIMITS.gust)) return "go";
+  if (ws <= LIMITS.okWind && wh <= LIMITS.okWave) return "ok";
+  return "no";
+}
+// 出し風: 風が来る方角が、陸側(海の方角の反対)から±70度以内
+function isOffshore(dir, seaBearing, ws){
+  var diff = Math.abs(((dir - (seaBearing + 180)) % 360 + 540) % 360 - 180);
+  return diff <= LIMITS.offSpread && ws >= LIMITS.offMin;
+}
+function runs(hours, test){
+  var out = [], start = -1;
+  for (var i = 0; i <= hours.length; i++) {
+    var hit = i < hours.length && hours[i].day && test(hours[i]);
+    if (hit && start < 0) start = i;
+    if (!hit && start >= 0) { if (i - start >= 3) out.push({ from:hours[start].h, to:hours[i-1].h }); start = -1; }
+  }
+  return out;
+}
+// 潮位(m, 1時間ごと)から、日ごとの潮位(cm)と満潮・干潮を出す
+function tideFromSeaLevel(sl, nDays){
+  if (!sl || sl.some(function(v){ return v == null; })) return null;
+  var days = [], d, i;
+  for (d = 0; d < nDays; d++) days.push({ h: sl.slice(d*24, d*24+24).map(function(v){ return Math.round(v*100); }), hi:[], lo:[] });
+  for (i = 1; i < sl.length - 1; i++) {
+    var a = sl[i-1], b = sl[i], c = sl[i+1];
+    var isHi = b > a && b >= c, isLo = b < a && b <= c;
+    if (!isHi && !isLo) continue;
+    var den = a - 2*b + c, off = den === 0 ? 0 : 0.5 * (a - c) / den;
+    off = Math.max(-0.5, Math.min(0.5, off));
+    var peak = b - 0.25 * (a - c) * off, t = i + off, day = Math.floor(t / 24);
+    if (day < 0 || day >= nDays) continue;
+    var mins = Math.round((t - day*24) * 60), hh = Math.floor(mins / 60), mm = mins % 60;
+    (isHi ? days[day].hi : days[day].lo).push([("0"+hh).slice(-2) + ":" + ("0"+mm).slice(-2), Math.round(peak*100)]);
+  }
+  return days;
+}
+// 潮名(月と太陽の黄経差から。気象庁と同じ区分)
+function shioName(ts){
+  var d = (ts - Date.UTC(2000,0,1,12)) / 86400000, R = Math.PI / 180;
+  var g = (357.528 + 0.9856003*d) * R;
+  var sun = 280.460 + 0.9856474*d + 1.915*Math.sin(g) + 0.020*Math.sin(2*g);
+  var M = (134.963 + 13.064993*d) * R, D = (297.850 + 12.190749*d) * R, F = (93.272 + 13.229350*d) * R;
+  var moon = 218.316 + 13.176396*d + 6.289*Math.sin(M) - 1.274*Math.sin(M - 2*D) + 0.658*Math.sin(2*D) - 0.186*Math.sin(g) - 0.114*Math.sin(2*F);
+  var x = ((((moon - sun) % 360) + 360) % 360) % 180;
+  if (x < 36 || x >= 168) return "大潮";
+  if (x < 72) return "中潮";
+  if (x < 108) return "小潮";
+  if (x < 120) return "長潮";
+  if (x < 132) return "若潮";
+  return "中潮";
+}
+function buildDays(f, seaBearing){
+  var days = [], n = Math.floor(f.wh.length / 24);
+  var base = new Date(f.t0.slice(0,10) + "T00:00:00+09:00").getTime();
+  for (var d = 0; d < n; d++) {
+    var rise = hm(f.sr[d]), set = hm(f.ss[d]), hours = [];
+    for (var h = 0; h < 24; h++) {
+      var i = d*24 + h, ws = f.ws[i], wh = f.wh[i];
+      hours.push({ h:h, ws:ws, wh:wh, wg:f.wg[i], wp:f.wp[i], dir:f.wdir[i], wc:f.wc[i],
+        day: h >= Math.ceil(rise) && h <= Math.floor(set),
+        v: judgeHour(ws, wh, f.wc[i], f.wg[i]),
+        off: isOffshore(f.wdir[i], seaBearing, ws), gust: f.wg[i] > LIMITS.gust, thunder: f.wc[i] >= 95,
+        chop: f.wp[i] < 4 && wh >= 0.4,
+        sh:f.sh[i], sp:f.sp[i], sd:f.sd[i], swell: f.sp[i] >= LIMITS.swellSec && f.sh[i] >= LIMITS.swellM,
+        tide: f.tide ? f.tide[d].h[h] : null });
+    }
+    var go = runs(hours, function(x){ return x.v === "go"; }), ok = runs(hours, function(x){ return x.v !== "no"; });
+    days.push({ ts: base + d*86400000, rise:f.sr[d], set:f.ss[d], hours:hours, go:go, ok:ok,
+      verdict: go.length ? "go" : ok.length ? "ok" : "no", tide: f.tide ? f.tide[d] : null,
+      shio: shioName(base + d*86400000 + 12*3600000) });
+  }
+  return days;
+}
+function span(r){ return r.from + ":00〜" + r.to + ":00"; }
+
+/* ---------- 保存(この端末の中だけ) ---------- */
+function load(key, fallback){ try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } }
+function save(key, val){ try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+var favs = load("shukko:favs", null);
+if (!Array.isArray(favs)) favs = [ PRESETS.filter(function(p){ return p.id === DEFAULT_ID; })[0] ];
+var place = load("shukko:place", null) || favs[0] || PRESETS.filter(function(p){ return p.id === DEFAULT_ID; })[0];
+var current = null;   // 表示中の予報
+
+/* ---------- 予報の取得 ---------- */
+function fetchForecast(p){
+  var q = "latitude=" + p.lat.toFixed(4) + "&longitude=" + p.lon.toFixed(4) + "&timezone=Asia%2FTokyo&forecast_days=7";
+  var get = function(u){ return fetch(u).then(function(r){ if (!r.ok) throw new Error("http " + r.status); return r.json(); }); };
+  return Promise.all([
+    get("https://marine-api.open-meteo.com/v1/marine?" + q + "&hourly=wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,swell_wave_direction,sea_level_height_msl"),
+    get("https://api.open-meteo.com/v1/forecast?" + q + "&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&daily=sunrise,sunset&wind_speed_unit=ms")
+  ]).then(function(res){
+    var m = res[0].hourly, w = res[1].hourly, n = Math.floor(Math.min(m.time.length, w.time.length) / 24) * 24;
+    var cut = function(a){ return a.slice(0, n); };
+    if (!n || m.time[0] !== w.time[0]) throw new Error("shape");
+    if (cut(m.wave_height).some(function(v){ return v == null; })) { var e = new Error("nosea"); e.nosea = true; throw e; }
+    var fill = function(a){ return cut(a).map(function(v){ return v == null ? 0 : v; }); };
+    return { fetched: Date.now(), t0: m.time[0], wh: cut(m.wave_height), wp: fill(m.wave_period), wd: fill(m.wave_direction),
+      sh: fill(m.swell_wave_height), sp: fill(m.swell_wave_period), sd: fill(m.swell_wave_direction),
+      ws: cut(w.wind_speed_10m), wdir: cut(w.wind_direction_10m), wg: cut(w.wind_gusts_10m), wc: cut(w.weather_code),
+      sr: res[1].daily.sunrise.map(function(s){ return s.slice(11); }), ss: res[1].daily.sunset.map(function(s){ return s.slice(11); }),
+      tide: tideFromSeaLevel(cut(m.sea_level_height_msl), n / 24) };
+  });
+}
+
+/* ---------- 表示 ---------- */
+var W = "日月火水木金土", VNAME = { go:"出航可", ok:"要注意", no:"中止" };
+function $(id){ return document.getElementById(id); }
+function el(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function jst(ts){ return new Date(ts + 9*3600e3); }
+function dateLabel(ts){ var d = jst(ts); return { md:(d.getUTCMonth()+1) + "/" + d.getUTCDate(), w:W[d.getUTCDay()], dow:d.getUTCDay() }; }
+function spans(list){ return list.map(span).join("、"); }
+function hhmm(s){ return String(+s.slice(0,2)) + s.slice(2); }
+function tideList(a){ return a.map(function(e){ return hhmm(e[0]) + "(" + e[1] + "cm)"; }).join("・") || "なし"; }
+function fact(p, label, value, cls){ var s = el("span"); s.appendChild(el("b", null, label)); s.appendChild(el("span", cls || "num", value)); p.appendChild(s); }
+function facts(d){
+  var p = el("p","facts");
+  fact(p, "日の出", hhmm(d.rise)); fact(p, "日の入", hhmm(d.set));
+  if (d.tide) { fact(p, "満潮", tideList(d.tide.hi)); fact(p, "干潮", tideList(d.tide.lo)); }
+  fact(p, "潮", d.shio, "shio");
+  return p;
+}
+var NS = "http://www.w3.org/2000/svg";
+function svg(tag, attrs){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); return e; }
+function tideSvg(d, lo, hi){
+  var s = svg("svg", { "class":"tide", viewBox:"0 0 160 34", preserveAspectRatio:"none", role:"img", "aria-label":"潮位の動き" });
+  var y = function(v){ return 30 - (v - lo) / Math.max(1, hi - lo) * 26; }, x = function(h){ return (h - 4) * 10 + 5; }, pts = [];
+  for (var h = 4; h <= 19; h++) pts.push(x(h).toFixed(1) + "," + y(d.tide.h[h]).toFixed(1));
+  s.appendChild(svg("polygon", { "class":"area", points:"5,34 " + pts.join(" ") + " 155,34" }));
+  s.appendChild(svg("polyline", { "class":"curve", points:pts.join(" ") }));
+  var r = hm(d.rise), t = hm(d.set);
+  if (r > 4) s.appendChild(svg("rect", { "class":"dark", x:0, y:0, width:Math.max(0, x(r)).toFixed(1), height:34 }));
+  if (t < 19.5) s.appendChild(svg("rect", { "class":"dark", x:x(t).toFixed(1), y:0, width:Math.max(0, 160 - x(t)).toFixed(1), height:34 }));
+  return s;
+}
+function render(){
+  var f = current; if (!f) return;
+  var days = buildDays(f, place.b), now = Date.now();
+  var today = Math.floor((now + 9*3600e3) / 86400e3) * 86400e3 - 9*3600e3, nowH = jst(now).getUTCHours();
+  days = days.filter(function(d){ return d.ts >= today; });
+  $("empty").hidden = true;
+  var tmin = 999, tmax = -999;
+  days.forEach(function(d){ if (d.tide) d.tide.h.forEach(function(v){ tmin = Math.min(tmin, v); tmax = Math.max(tmax, v); }); });
+
+  var age = (now - f.fetched) / 3600e3, fd = jst(f.fetched);
+  $("meta").textContent = "予報の取得: " + (fd.getUTCMonth()+1) + "/" + fd.getUTCDate() + " " + fd.getUTCHours() + ":" + ("0"+fd.getUTCMinutes()).slice(-2) + "(Open-Meteo)。地点 北緯" + place.lat.toFixed(3) + "・東経" + place.lon.toFixed(3);
+  var stale = $("stale");
+  if (age > 6) { stale.hidden = false; stale.textContent = "この予報は " + Math.round(age) + " 時間前のものです。右上の更新ボタンで最新にしてください。"; } else stale.hidden = true;
+
+  var next = null, nextOk = null;
+  days.forEach(function(d){
+    var isToday = d.ts === today;
+    d.go.forEach(function(r){ if (!next && (!isToday || r.to > nowH)) next = { d:d, r:r }; });
+    d.ok.forEach(function(r){ if (!nextOk && (!isToday || r.to > nowH)) nextOk = { d:d, r:r }; });
+  });
+  var box = $("next"), pick = next || nextOk; box.hidden = false; box.textContent = "";
+  box.className = "next " + (next ? "go" : nextOk ? "ok" : "no");
+  box.appendChild(el("div","label", next ? "次に出航できる時間帯" : nextOk ? "出航可の時間帯なし・要注意なら" : "この7日間"));
+  var big = el("div","big");
+  if (pick) { var L0 = dateLabel(pick.d.ts); big.appendChild(el("span","num", L0.md)); big.appendChild(document.createTextNode("(" + L0.w + ") ")); big.appendChild(el("span","num", span(pick.r))); }
+  else big.textContent = "出航できる時間帯はありません";
+  box.appendChild(big);
+  if (pick) box.appendChild(facts(pick.d));
+  var wk = days.filter(function(d){ var w = dateLabel(d.ts).dow; return w === 6 || w === 0; }).slice(0, 2);
+  if (wk.length) box.appendChild(el("div","sub", "週末: " + wk.map(function(d){
+    return dateLabel(d.ts).w + "曜 " + (d.go.length ? "出航可 " + spans(d.go) : d.ok.length ? "要注意 " + spans(d.ok) : "中止"); }).join(" / ")));
+
+  var openIds = {}; Array.prototype.forEach.call(document.querySelectorAll("details.day[open]"), function(x){ openIds[x.id] = 1; });
+  var host = $("days"); host.textContent = "";
+  days.forEach(function(d){
+    var L = dateLabel(d.ts), isToday = d.ts === today;
+    var det = el("details","day" + ((L.dow === 6 || L.dow === 0) ? " wkend" : "")); det.id = "day-" + L.md.replace("/","-");
+    if (openIds[det.id]) det.open = true;
+    var sum = el("summary"), head = el("div","head");
+    var date = el("span","date num", L.md); date.appendChild(el("small", null, "(" + L.w + ")" + (isToday ? " 今日" : ""))); head.appendChild(date);
+    head.appendChild(el("span","pill " + d.verdict, VNAME[d.verdict]));
+    var win = el("span","win");
+    if (d.verdict === "go") win.appendChild(el("span","num", spans(d.go))); else if (d.verdict === "ok") win.appendChild(el("span","num", spans(d.ok))); else win.textContent = "出せる時間帯なし";
+    head.appendChild(win);
+    var op = el("span","open"); op.appendChild(el("span","a","1時間ごとを見る")); op.appendChild(el("span","b","閉じる")); head.appendChild(op);
+    sum.appendChild(head);
+    var strip = el("div","strip"), ticks = el("div","ticks");
+    for (var h = 4; h <= 19; h++) {
+      var x = d.hours[h];
+      strip.appendChild(el("div","cell" + (x.day ? " " + x.v : "") + ((isToday && h < nowH) ? " gone" : "")));
+      ticks.appendChild(el("span","num", (h % 3 === 0) ? String(h) : ""));
+    }
+    sum.appendChild(strip); if (d.tide) sum.appendChild(tideSvg(d, tmin, tmax)); sum.appendChild(ticks); sum.appendChild(facts(d));
+    var notes = [], dl = d.hours.filter(function(x){ return x.day && x.v !== "no"; });
+    if (d.verdict === "go" && spans(d.ok) !== spans(d.go)) notes.push("要注意まで含めると " + spans(d.ok));
+    if (dl.some(function(x){ return x.off; })) notes.push("出し風の時間あり");
+    if (dl.some(function(x){ return x.gust; })) notes.push("突風8m/s超の時間あり");
+    if (dl.some(function(x){ return x.swell; })) notes.push("うねりの時間あり");
+    if (d.hours.some(function(x){ return x.day && x.thunder; })) notes.push("雷の予報あり");
+    if (notes.length) sum.appendChild(el("p","extra", notes.join(" / ")));
+    det.appendChild(sum);
+
+    var tb = el("div","tablebox"), t = el("table","hourly"), hr = el("tr");
+    ["時刻","判定","風 m/s","突風","波 m","周期 秒","うねり m","周期 秒","潮位 cm","注意"].forEach(function(s){ hr.appendChild(el("th", null, s)); });
+    var thead = el("thead"); thead.appendChild(hr); t.appendChild(thead);
+    var body = el("tbody");
+    for (var k = 4; k <= 19; k++) {
+      var y = d.hours[k], tr = el("tr", y.day ? "" : "night");
+      tr.appendChild(el("td","num", k + ":00"));
+      var v = el("td"); v.appendChild(el("i","mark" + (y.day ? " " + y.v : ""))); v.appendChild(document.createTextNode(y.day ? VNAME[y.v] : "夜")); tr.appendChild(v);
+      var w = el("td"); w.appendChild(document.createTextNode(dirName(y.dir) + " ")); w.appendChild(el("span","num" + (y.ws > LIMITS.goWind ? " over" : ""), y.ws.toFixed(1))); tr.appendChild(w);
+      tr.appendChild(el("td","num" + (y.gust ? " over" : ""), y.wg.toFixed(1)));
+      tr.appendChild(el("td","num" + (y.wh > LIMITS.goWave ? " over" : ""), y.wh.toFixed(2)));
+      tr.appendChild(el("td","num", y.wp.toFixed(1)));
+      var sw = el("td"); sw.appendChild(document.createTextNode(dirName(y.sd) + " ")); sw.appendChild(el("span","num", y.sh.toFixed(2))); tr.appendChild(sw);
+      tr.appendChild(el("td","num" + (y.swell ? " over" : ""), y.sp.toFixed(1)));
+      tr.appendChild(el("td","num", y.tide != null ? String(y.tide) : "—"));
+      var fl = el("td");
+      if (y.thunder) fl.appendChild(el("span","flag","雷"));
+      if (y.off) fl.appendChild(el("span","flag","出し風"));
+      if (y.gust) fl.appendChild(el("span","flag","突風"));
+      if (y.chop) fl.appendChild(el("span","flag","波が細かい"));
+      if (y.swell) fl.appendChild(el("span","flag","うねり"));
+      tr.appendChild(fl); body.appendChild(tr);
+    }
+    t.appendChild(body); tb.appendChild(t);
+    tb.appendChild(el("p","sun","風・うねりの向きは、来る方角です。"));
+    det.appendChild(tb); host.appendChild(det);
+  });
+
+  var sec = $("tidesec"), tt = $("tidetable"); tt.textContent = "";
+  sec.hidden = !days.some(function(d){ return d.tide; });
+  var hr2 = el("tr"); ["日付","潮","満潮","干潮","日の出","日の入"].forEach(function(s){ hr2.appendChild(el("th", null, s)); });
+  var th2 = el("thead"); th2.appendChild(hr2); tt.appendChild(th2);
+  var b2 = el("tbody");
+  days.forEach(function(d){
+    var L = dateLabel(d.ts), tr = el("tr");
+    tr.appendChild(el("td","num", L.md + "(" + L.w + ")")); tr.appendChild(el("td", null, d.shio));
+    tr.appendChild(el("td","num", d.tide ? tideList(d.tide.hi).replace(/・/g,"\n") : "—"));
+    tr.appendChild(el("td","num", d.tide ? tideList(d.tide.lo).replace(/・/g,"\n") : "—"));
+    tr.appendChild(el("td","num", hhmm(d.rise))); tr.appendChild(el("td","num", hhmm(d.set)));
+    b2.appendChild(tr);
+  });
+  tt.appendChild(b2);
+}
+function clearView(msg){
+  current = null; $("next").hidden = true; $("stale").hidden = true; $("tidesec").hidden = true; $("days").textContent = ""; $("meta").textContent = "";
+  var e = $("empty"); e.hidden = false; e.textContent = msg;
+}
+
+/* ---------- 地点の切り替え・お気に入り ---------- */
+function placeLabel(p){ return p.name + (p.pref ? "・" + p.pref : ""); }
+function isFav(id){ return favs.some(function(p){ return p.id === id; }); }
+function syncBar(){
+  $("placename").textContent = placeLabel(place);
+  var on = isFav(place.id), b = $("favbtn"); b.classList.toggle("on", on); b.setAttribute("aria-label", on ? "お気に入りから外す" : "お気に入りに登録");
+  $("bearing").value = String(nearest8(place.b));
+}
+function nearest8(deg){ return (Math.round((((deg % 360) + 360) % 360) / 45) % 8) * 45; }
+function cacheKey(p){ return "shukko:fc:" + p.lat.toFixed(3) + "," + p.lon.toFixed(3); }
+var loadSeq = 0;
+function show(p, force){
+  place = p; save("shukko:place", p); syncBar();
+  var cached = load(cacheKey(p), null), seq = ++loadSeq;
+  if (cached && cached.wh) { current = cached; render(); } else clearView("予報を読み込んでいます。");
+  if (!force && cached && Date.now() - cached.fetched < 3600e3) return;
+  $("reload").classList.add("spin");
+  fetchForecast(p).then(function(f){
+    if (seq !== loadSeq) return;
+    current = f; save(cacheKey(p), f); render();
+  }).catch(function(e){
+    if (seq !== loadSeq) return;
+    if (e && e.nosea) clearView("この地点には海の予報がありません。地図で、もう少し海側の場所を選び直してください。");
+    else if (!current) clearView("予報を取得できませんでした。電波の届く場所で、右上の更新ボタンを押してください。");
+    else { var s = $("stale"); s.hidden = false; s.textContent = "最新の予報を取得できませんでした。表示は前回取得した予報です。電波の届く場所で更新してください。"; }
+  }).then(function(){ if (seq === loadSeq) $("reload").classList.remove("spin"); });
+}
+$("reload").addEventListener("click", function(){ show(place, true); });
+$("favbtn").addEventListener("click", function(){
+  if (isFav(place.id)) favs = favs.filter(function(p){ return p.id !== place.id; }); else favs.push(place);
+  save("shukko:favs", favs); syncBar();
+});
+var bsel = $("bearing"), psel = $("pinbearing");
+DIRS.forEach(function(n, i){ [bsel, psel].forEach(function(s){ var o = el("option", null, n + "向き"); o.value = String(i*45); s.appendChild(o); }); });
+bsel.addEventListener("change", function(){
+  place = Object.assign({}, place, { b:+bsel.value }); save("shukko:place", place);
+  favs = favs.map(function(p){ return p.id === place.id ? place : p; }); save("shukko:favs", favs);
+  render();
+});
+
+/* ---------- 地点を選ぶシート ---------- */
+var sheet = $("sheet"), panes = { fav:$("favpane"), list:$("listpane"), map:$("mappane") }, curPref = null;
+function openSheet(tab){ sheet.hidden = false; document.body.style.overflow = "hidden"; setTab(tab || (favs.length ? "fav" : "list")); }
+function closeSheet(){ sheet.hidden = true; document.body.style.overflow = ""; }
+function choose(p){ closeSheet(); window.scrollTo(0, 0); show(p, false); }
+function setTab(name){
+  Array.prototype.forEach.call(sheet.querySelectorAll("[role=tab]"), function(b){ b.setAttribute("aria-selected", String(b.dataset.tab === name)); });
+  for (var k in panes) panes[k].hidden = k !== name;
+  if (name === "fav") drawFavs(); if (name === "list") drawList(); if (name === "map") initMap();
+}
+function itemButton(p){
+  var b = el("button","go" + (p.id === place.id ? " cur" : "")); b.type = "button"; b.textContent = p.name;
+  b.appendChild(el("small", null, (p.pref || "地図で選んだ地点") + "・海は" + dirName(p.b) + "向き"));
+  b.addEventListener("click", function(){ choose(p); }); return b;
+}
+function drawFavs(){
+  var host = panes.fav; host.textContent = "";
+  if (!favs.length) { host.appendChild(el("p","hint","お気に入りはまだありません。地点を表示して、右上の星を押すと登録できます。")); return; }
+  var list = el("div","list");
+  favs.forEach(function(p){
+    var row = el("div","item"); row.appendChild(itemButton(p));
+    var d = el("button","del","外す"); d.type = "button"; d.setAttribute("aria-label", p.name + "をお気に入りから外す");
+    d.addEventListener("click", function(){ favs = favs.filter(function(x){ return x.id !== p.id; }); save("shukko:favs", favs); syncBar(); drawFavs(); });
+    row.appendChild(d); list.appendChild(row);
+  });
+  host.appendChild(list);
+}
+function drawList(){
+  var host = panes.list; host.textContent = "";
+  var prefs = []; PRESETS.forEach(function(p){ if (prefs.indexOf(p.pref) < 0) prefs.push(p.pref); });
+  if (!curPref) curPref = place.pref && prefs.indexOf(place.pref) >= 0 ? place.pref : "福井";
+  var chips = el("div","prefs");
+  prefs.forEach(function(n){ var b = el("button", null, n); b.type = "button"; b.setAttribute("aria-pressed", String(n === curPref)); b.addEventListener("click", function(){ curPref = n; drawList(); }); chips.appendChild(b); });
+  host.appendChild(chips); host.appendChild(el("h3", null, curPref + "の地点"));
+  var list = el("div","list");
+  PRESETS.filter(function(p){ return p.pref === curPref; }).forEach(function(p){ var row = el("div","item"); row.appendChild(itemButton(p)); list.appendChild(row); });
+  host.appendChild(list);
+}
+var map = null, pin = null, pinPos = null;
+function initMap(){
+  var btn = $("usepin");
+  if (!window.L) { $("map").textContent = "地図を読み込めませんでした。電波の届く場所で開き直してください。"; return; }
+  if (!map) {
+    map = L.map("map", { zoomControl:true }).setView([place.lat, place.lon], 10);
+    L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png", { maxZoom:18, attribution:'<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>' }).addTo(map);
+    PRESETS.forEach(function(p){
+      L.circleMarker([p.lat, p.lon], { radius:6, weight:2, color:"#0B5F78", fillColor:"#FFFFFF", fillOpacity:1 }).addTo(map)
+        .on("click", function(ev){ L.DomEvent.stopPropagation(ev); setPin(p.lat, p.lon, p.name, p.b, p); });
+    });
+    map.on("click", function(ev){ setPin(ev.latlng.lat, ev.latlng.lng, "", null, null); });
+  } else map.setView([place.lat, place.lon], Math.max(map.getZoom(), 9));
+  setTimeout(function(){ map.invalidateSize(); }, 50);
+  function setPin(lat, lon, name, b, preset){
+    pinPos = { lat:lat, lon:lon, preset:preset };
+    if (pin) pin.setLatLng([lat, lon]); else pin = L.marker([lat, lon]).addTo(map);
+    if (b == null) { var best = null, bd = 1e9; PRESETS.forEach(function(p){ var dd = Math.pow(p.lat - lat, 2) + Math.pow((p.lon - lon) * 0.8, 2); if (dd < bd) { bd = dd; best = p; } }); b = best.b; }
+    $("pinname").value = name; $("pinbearing").value = String(nearest8(b));
+    btn.disabled = false; btn.textContent = "この地点の予報を見る";
+  }
+}
+$("usepin").addEventListener("click", function(){
+  if (!pinPos) return;
+  var b = +$("pinbearing").value, name = $("pinname").value.trim();
+  if (pinPos.preset && (!name || name === pinPos.preset.name)) { choose(Object.assign({}, pinPos.preset, { b:b })); return; }
+  choose({ id:"c:" + pinPos.lat.toFixed(4) + "," + pinPos.lon.toFixed(4), pref:"", name: name || ("北緯" + pinPos.lat.toFixed(2) + "・東経" + pinPos.lon.toFixed(2)), lat:+pinPos.lat.toFixed(4), lon:+pinPos.lon.toFixed(4), b:b });
+});
+$("placebtn").addEventListener("click", function(){ openSheet(); });
+$("closesheet").addEventListener("click", closeSheet);
+Array.prototype.forEach.call(sheet.querySelectorAll("[role=tab]"), function(b){ b.addEventListener("click", function(){ setTab(b.dataset.tab); }); });
+
+/* ---------- 起動 ---------- */
+show(place, false);
+document.addEventListener("visibilitychange", function(){ if (!document.hidden && current && Date.now() - current.fetched > 3600e3) show(place, true); });
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(function(){});
+</script>
+</body>
+</html>
