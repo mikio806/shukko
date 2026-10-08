@@ -58,6 +58,48 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 .stale{background:var(--no-soft);border-left:4px solid var(--no);padding:10px 12px;font-size:14px;font-weight:500}
 .empty{background:var(--surface);border:1px dashed var(--line);border-radius:6px;padding:22px 18px;color:var(--muted)}
 
+/* 海のようす: 選んだ時刻の風・波を動く絵で見せる */
+.sea{background:var(--surface);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seabox{position:relative;line-height:0}
+#seacanvas{display:block;width:100%;height:200px}
+.windchip{position:absolute;left:10px;top:10px;line-height:1.3;font-size:12px;font-weight:800;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.88);color:#0F2730;transition:background .3s,color .3s}
+.windchip.off{background:#BF3B2A;color:#fff}
+.seabody{padding:12px 14px 14px;display:flex;flex-direction:column;gap:12px}
+.seahead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.seawhen{font-size:24px;font-weight:600}
+.seahead .pill{font-size:14px;padding:3px 12px;transition:background .3s,color .3s}
+.pill.nt{background:var(--night);color:var(--muted)}
+.why{margin:0;font-size:14px}
+.gauges{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.gauge{min-width:0}
+.gauge .gl{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);font-weight:700}
+.gauge .gv{font-size:22px;font-weight:600;color:var(--ink)}
+.gauge .gv small{font-family:var(--jp);font-size:11px;font-weight:700;color:var(--muted);margin-left:1px}
+.track{position:relative;height:8px;border-radius:4px;margin-top:4px;background:linear-gradient(to right,var(--go) 0 var(--z1),var(--ok) var(--z1) var(--z2),var(--no) var(--z2) 100%);opacity:.9}
+.track i{position:absolute;top:-4px;width:4px;height:16px;border-radius:2px;background:var(--ink);box-shadow:0 0 0 2px var(--surface);transform:translateX(-2px);transition:left .35s cubic-bezier(.2,.8,.2,1)}
+.seaextra{margin:0;font-size:13px;color:var(--muted)}
+.scrub{position:relative;touch-action:pan-y;cursor:ew-resize;user-select:none;-webkit-user-select:none;padding:6px 0 2px}
+.scrub .strip .cell{height:34px;transition:transform .15s,opacity .15s}
+.scrub .strip .cell.sel{transform:scaleY(1.25);box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink);position:relative;z-index:1}
+.scrub .ticks{margin-top:6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.seactl{display:flex;gap:6px;align-items:stretch}
+.playbtn{flex:none;background:var(--accent);color:var(--bg);border:0;border-radius:6px;padding:0 14px;font-weight:800;font-size:14px;min-height:44px}
+.chips{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:none;background:var(--bg);border:1px solid var(--line);border-bottom-width:4px;border-radius:6px;padding:3px 9px;line-height:1.25;font-size:12px;font-weight:700;min-height:40px}
+.chips button .num{display:block;font-size:16px;font-weight:600}
+.chips button.go{border-bottom-color:var(--go)} .chips button.ok{border-bottom-color:var(--ok)} .chips button.no{border-bottom-color:var(--no)}
+.chips button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chips button.go[aria-pressed=true]{border-bottom-color:var(--go)} .chips button.ok[aria-pressed=true]{border-bottom-color:var(--ok)} .chips button.no[aria-pressed=true]{border-bottom-color:var(--no)}
+@keyframes sheetup{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.sheet{animation:sheetup .22s ease-out}
+.icon.on svg{animation:pop .3s ease-out}
+details.day[open] .tablebox{animation:fadein .25s ease-out}
+@media (prefers-reduced-motion: reduce){ .sheet,.icon.on svg,details.day[open] .tablebox{animation:none} .track i,.scrub .strip .cell{transition:none} }
+
 .days{display:flex;flex-direction:column;gap:8px}
 details.day{background:var(--surface);border:1px solid var(--line);border-radius:6px}
 details.day.wkend{border-color:var(--accent)}
@@ -151,6 +193,26 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
 <main class="wrap">
   <div id="stale" class="stale" hidden></div>
   <section id="next" class="next" hidden></section>
+  <section id="sea" class="sea" hidden>
+    <div class="seabox"><canvas id="seacanvas" role="img" aria-label="選んだ時刻の海のようす"></canvas><span class="windchip" id="windchip"></span></div>
+    <div class="seabody">
+      <div class="seahead"><span class="seawhen num" id="seawhen"></span><span class="pill" id="seaverdict"></span></div>
+      <p class="why" id="seawhy"></p>
+      <div class="gauges">
+        <div class="gauge"><div class="gl"><span>風</span><span class="gv num" id="gwind"></span></div><div class="track" style="--z1:41.7%;--z2:66.7%"><i id="mwind"></i></div></div>
+        <div class="gauge"><div class="gl"><span>突風</span><span class="gv num" id="ggust"></span></div><div class="track" style="--z1:50%;--z2:50%"><i id="mgust"></i></div></div>
+        <div class="gauge"><div class="gl"><span>波</span><span class="gv num" id="gwave"></span></div><div class="track" style="--z1:41.7%;--z2:58.3%"><i id="mwave"></i></div></div>
+      </div>
+      <p class="seaextra" id="seaextra"></p>
+      <div class="scrub" id="scrub">
+        <div class="strip" id="seastrip"></div>
+        <div class="ticks" id="seaticks"></div>
+        <label class="sr" for="hourrange">時刻</label><input class="sr" type="range" id="hourrange" min="4" max="19" step="1">
+      </div>
+      <p class="seaextra">色の帯を指でなぞると、その時刻の海のようすに変わります。</p>
+      <div class="seactl"><button class="playbtn" id="playbtn" type="button">1日を再生</button><div class="chips" id="chips"></div></div>
+    </div>
+  </section>
   <div id="empty" class="empty">予報を読み込んでいます。</div>
   <section id="days" class="days"></section>
   <section class="sec" id="tidesec" hidden>
@@ -288,7 +350,7 @@ function buildDays(f, seaBearing){
     var rise = hm(f.sr[d]), set = hm(f.ss[d]), hours = [];
     for (var h = 0; h < 24; h++) {
       var i = d*24 + h, ws = f.ws[i], wh = f.wh[i];
-      hours.push({ h:h, ws:ws, wh:wh, wg:f.wg[i], wp:f.wp[i], dir:f.wdir[i], wc:f.wc[i],
+      hours.push({ h:h, ws:ws, wh:wh, wg:f.wg[i], wp:f.wp[i], wd:f.wd[i], dir:f.wdir[i], wc:f.wc[i],
         day: h >= Math.ceil(rise) && h <= Math.floor(set),
         v: judgeHour(ws, wh, f.wc[i], f.wg[i]),
         off: isOffshore(f.wdir[i], seaBearing, ws), gust: f.wg[i] > LIMITS.gust, thunder: f.wc[i] >= 95,
@@ -396,6 +458,15 @@ function render(){
   if (wk.length) box.appendChild(el("div","sub", "週末: " + wk.map(function(d){
     return dateLabel(d.ts).w + "曜 " + (d.go.length ? "出航可 " + spans(d.go) : d.ok.length ? "要注意 " + spans(d.ok) : "中止"); }).join(" / ")));
 
+  var key = place.id + "|" + f.t0 + "|" + today;
+  viewDays = days; viewToday = today; viewNowH = nowH;
+  if (key !== selKey || !days[sel.di]) {
+    selKey = key;
+    var di = pick ? days.indexOf(pick.d) : 0;
+    sel = { di: Math.max(0, di), h: pick ? Math.max(pick.r.from, (pick.d.ts === today ? Math.min(nowH, pick.r.to) : 0)) : Math.min(19, Math.max(4, nowH)) };
+  }
+  drawSea(true);
+
   var openIds = {}; Array.prototype.forEach.call(document.querySelectorAll("details.day[open]"), function(x){ openIds[x.id] = 1; });
   var host = $("days"); host.textContent = "";
   days.forEach(function(d){
@@ -470,9 +541,160 @@ function render(){
   tt.appendChild(b2);
 }
 function clearView(msg){
-  current = null; $("next").hidden = true; $("stale").hidden = true; $("tidesec").hidden = true; $("days").textContent = ""; $("meta").textContent = "";
+  current = null; viewDays = []; stopPlay(); $("sea").hidden = true; $("next").hidden = true; $("stale").hidden = true; $("tidesec").hidden = true; $("days").textContent = ""; $("meta").textContent = "";
   var e = $("empty"); e.hidden = false; e.textContent = msg;
 }
+
+/* ---------- 海のようす(動く絵) ---------- */
+var viewDays = [], viewToday = 0, viewNowH = 0, sel = { di:0, h:8 }, selKey = "", playTimer = null, stripDay = -1;
+var RM = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+var cv = $("seacanvas"), cx = cv.getContext("2d"), cur = null, tgt = null, raf = 0, lastT = 0, phase = 0, clock = 0, seaOn = true, streaks = [], stars = [];
+(function(){ var s = 7; function r(){ s = (s * 16807) % 2147483647; return s / 2147483647; }
+  for (var i = 0; i < 18; i++) streaks.push({ x:r(), y:r(), l:0.6 + r()*0.8, v:0.7 + r()*0.6 });
+  for (var j = 0; j < 26; j++) stars.push({ x:r(), y:r()*0.5, a:0.4 + r()*0.6 }); })();
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+function windAlong(dir, b){ var d = ((dir - (b + 180)) % 360 + 540) % 360 - 180; return Math.cos(d * Math.PI / 180); }
+function whyText(x){
+  if (!x.day) return "日の出前・日没後なので、出航しない時間です。";
+  var a = [];
+  if (x.thunder) a.push("雷の予報");
+  if (x.ws > LIMITS.okWind) a.push("風が8m/s超"); else if (x.ws > LIMITS.goWind) a.push("風が5m/s超");
+  if (x.wh > LIMITS.okWave) a.push("波が0.7m超"); else if (x.wh > LIMITS.goWave) a.push("波が0.5m超");
+  if (x.gust) a.push("突風が8m/s超");
+  return a.length ? a.join("、") + "のため" + VNAME[x.v] + "です。" : "風も波も基準内です。";
+}
+function setGauge(id, mid, val, scale, digits){
+  var e = $(id); e.textContent = val.toFixed(digits); e.appendChild(el("small", null, id === "gwave" ? "m" : "m/s"));
+  $(mid).style.left = (clamp(val / scale, 0, 1) * 100).toFixed(1) + "%";
+}
+function drawSea(rebuild){
+  var d = viewDays[sel.di]; if (!d) return;
+  var sea = $("sea"); sea.hidden = false;
+  var x = d.hours[sel.h], L = dateLabel(d.ts), along = windAlong(x.dir, place.b), rise = hm(d.rise), set = hm(d.set);
+  $("seawhen").textContent = L.md + "(" + L.w + ") " + sel.h + ":00";
+  var pv = $("seaverdict"); pv.className = "pill " + (x.day ? x.v : "nt"); pv.textContent = x.day ? VNAME[x.v] : "夜";
+  $("seawhy").textContent = whyText(x);
+  setGauge("gwind", "mwind", x.ws, 12, 1); setGauge("ggust", "mgust", x.wg, 16, 1); setGauge("gwave", "mwave", x.wh, 1.2, 2);
+  var chip = $("windchip"), offshore = x.off;
+  chip.className = "windchip" + (offshore ? " off" : "");
+  chip.textContent = x.ws < 1 ? "ほぼ無風" : offshore ? "出し風 → 沖へ流される" : along > 0.35 ? "陸から沖への風" : along < -0.35 ? "海から岸への風" : "岸に沿う横風";
+  $("seaextra").textContent = dirName(x.dir) + "の風。波は" + dirName(x.wd != null ? x.wd : x.sd) + "から、周期" + x.wp.toFixed(1) + "秒。うねり" + x.sh.toFixed(2) + "m(周期" + x.sp.toFixed(1) + "秒)" + (x.tide != null ? "。潮位" + x.tide + "cm" : "") + "。";
+  if (rebuild || stripDay !== sel.di) {
+    stripDay = sel.di;
+    var st = $("seastrip"), tk = $("seaticks"); st.textContent = ""; tk.textContent = "";
+    for (var h = 4; h <= 19; h++) { var c = d.hours[h]; st.appendChild(el("div", "cell" + (c.day ? " " + c.v : "") + ((d.ts === viewToday && h < viewNowH) ? " gone" : ""))); tk.appendChild(el("span", "num", (h % 3 === 0) ? String(h) : "")); }
+    var ch = $("chips"); ch.textContent = "";
+    viewDays.forEach(function(dd, i){
+      var LL = dateLabel(dd.ts), b = el("button", dd.verdict); b.type = "button"; b.setAttribute("aria-pressed", String(i === sel.di));
+      b.appendChild(el("span", "num", LL.md)); b.appendChild(document.createTextNode(dd.ts === viewToday ? "今日" : LL.w + "曜"));
+      b.addEventListener("click", function(){ stopPlay(); var dn = viewDays[i]; sel = { di:i, h: dn.go.length ? dn.go[0].from : dn.ok.length ? dn.ok[0].from : clamp(sel.h, Math.ceil(hm(dn.rise)), Math.floor(hm(dn.set))) }; drawSea(true); });
+      ch.appendChild(b);
+    });
+  }
+  Array.prototype.forEach.call($("seastrip").children, function(c, i){ c.classList.toggle("sel", i === sel.h - 4); });
+  $("hourrange").value = String(sel.h);
+  var dayness = clamp((sel.h - (rise - 0.7)) / 1.2, 0, 1) * clamp(((set + 0.7) - sel.h) / 1.2, 0, 1);
+  var tl = 999, th = -999; viewDays.forEach(function(q){ if (q.tide) q.tide.h.forEach(function(v){ tl = Math.min(tl, v); th = Math.max(th, v); }); });
+  tgt = { A: clamp(x.wh * 18, 1, 28), lam: 50 + x.wp * 16, per: Math.max(1.6, x.wp * 0.6), ws: x.ws, wg: x.wg,
+    sign: x.ws < 1 ? 0 : (along >= 0 ? 1 : -1) * Math.max(0.3, Math.abs(along)), tide: x.tide != null && th > tl ? (x.tide - tl) / (th - tl) : 0.5,
+    d: dayness, warm: Math.max(0, 1 - Math.min(Math.abs(sel.h - rise), Math.abs(sel.h - set)) / 1.3), sunT: clamp((sel.h - rise) / (set - rise), -0.1, 1.1),
+    cloud: x.wc >= 3 ? 1 : x.wc === 2 ? 0.6 : x.wc === 1 ? 0.25 : 0, rain: (x.wc >= 51 && x.wc < 95) ? 1 : x.wc >= 95 ? 1 : 0, thunder: x.wc >= 95 ? 1 : 0,
+    launch: (x.day && x.v !== "no") ? 1 : 0 };
+  if (!cur || RM) cur = Object.assign({}, tgt);
+  kick();
+}
+function sizeCanvas(){
+  var r = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== Math.round(w * r) || cv.height !== Math.round(h * r)) { cv.width = Math.round(w * r); cv.height = Math.round(h * r); }
+  cx.setTransform(r, 0, 0, r, 0, 0); return { W:w, H:h };
+}
+function mix(a, b, t){ return [a[0] + (b[0]-a[0])*t, a[1] + (b[1]-a[1])*t, a[2] + (b[2]-a[2])*t]; }
+function rgb(c, al){ return "rgba(" + (c[0]|0) + "," + (c[1]|0) + "," + (c[2]|0) + "," + (al == null ? 1 : al) + ")"; }
+function wy(x, off, amp){ var k = 2 * Math.PI / cur.lam; return amp * (Math.sin(k*x + phase + off) + 0.3 * Math.sin(2.3*k*x + 1.7*phase + off*2)) + Math.min(2.5, cur.ws * 0.2) * Math.sin(0.16*x + phase*3 + off); }
+function waveLayer(W, H, base, off, amp, col){
+  cx.beginPath(); cx.moveTo(0, H);
+  for (var x = 0; x <= W + 3; x += 3) cx.lineTo(x, base + wy(x, off, amp));
+  cx.lineTo(W, H); cx.closePath(); cx.fillStyle = col; cx.fill();
+}
+function drawBoat(bx, by, ang, s, dim){
+  cx.save(); cx.translate(bx, by); cx.rotate(ang); cx.scale(s, s); cx.globalAlpha = dim;
+  cx.fillStyle = "#22313A"; cx.fillRect(-29, -12, 5, 9); cx.fillRect(-27.500, -3, 2, 8);            // 船外機
+  cx.fillStyle = "#F4F6F5"; cx.beginPath(); cx.moveTo(-24, -9); cx.lineTo(14, -9); cx.quadraticCurveTo(26, -10, 29, -15); cx.quadraticCurveTo(30, -4, 20, 0); cx.lineTo(-20, 0); cx.quadraticCurveTo(-25, 0, -25, -4.500); cx.closePath(); cx.fill();
+  cx.fillStyle = "#0B5F78"; cx.fillRect(-23, -5, 44, 2);
+  cx.fillStyle = "#1F3A4A"; cx.fillRect(-8, -20, 7, 11);                                            // 釣り人
+  cx.fillStyle = "#E9C9A6"; cx.beginPath(); cx.arc(-4.500, -24, 3.500, 0, 7); cx.fill();
+  cx.strokeStyle = "#22313A"; cx.lineWidth = 1.2; cx.beginPath(); cx.moveTo(-2, -16); cx.lineTo(22, -36); cx.stroke();
+  cx.lineWidth = 0.6; cx.beginPath(); cx.moveTo(22, -36); cx.lineTo(27, -6); cx.stroke();
+  cx.restore();
+}
+function paint(){
+  var sz = sizeCanvas(), W = sz.W, H = sz.H, p = cur, hor = H * 0.58 - (p.tide - 0.5) * 10, i;
+  // 空
+  var top = mix([9,24,40], [112,180,224], p.d), bot = mix([22,44,64], [214,236,244], p.d);
+  bot = mix(bot, [246,178,107], p.warm * 0.75 * Math.min(1, p.d * 3 + 0.25)); top = mix(top, [150,140,172], p.warm * 0.3);
+  top = mix(top, [128,140,150], p.cloud * 0.55 * p.d); bot = mix(bot, [188,196,200], p.cloud * 0.5 * p.d);
+  var g = cx.createLinearGradient(0, 0, 0, hor + 30); g.addColorStop(0, rgb(top)); g.addColorStop(1, rgb(bot)); cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+  if (p.d < 0.5) { cx.fillStyle = "#fff"; for (i = 0; i < stars.length; i++) { cx.globalAlpha = stars[i].a * (1 - p.d * 2) * (1 - p.cloud * 0.8); cx.fillRect(stars[i].x * W, stars[i].y * H, 1.5, 1.5); } cx.globalAlpha = 1;
+    cx.fillStyle = rgb([236,238,226], (1 - p.d * 2) * (1 - p.cloud * 0.6)); cx.beginPath(); cx.arc(W * 0.82, H * 0.2, 9, 0, 7); cx.fill(); }
+  if (p.d > 0.02) { var sx = W * (0.24 + 0.7 * p.sunT), sy = hor - Math.sin(Math.PI * clamp(p.sunT, 0, 1)) * H * 0.44 - 2;
+    var sg = cx.createRadialGradient(sx, sy, 2, sx, sy, 46); sg.addColorStop(0, "rgba(255,240,200," + (0.75 * p.d * (1 - p.cloud * 0.6)) + ")"); sg.addColorStop(1, "rgba(255,240,200,0)"); cx.fillStyle = sg; cx.fillRect(sx - 46, sy - 46, 92, 92);
+    cx.fillStyle = rgb(mix([255,246,220], [255,196,120], p.warm), p.d * (1 - p.cloud * 0.5)); cx.beginPath(); cx.arc(sx, sy, 11, 0, 7); cx.fill(); }
+  if (p.cloud > 0.05) { cx.fillStyle = rgb(mix([60,72,84], [236,240,242], p.d), 0.75 * p.cloud);
+    for (i = 0; i < 3; i++) { var cxp = ((i * 0.37 + 0.1) * W + clock * (3 + i) * (p.sign || 0.3) + 4 * (W + 160)) % (W + 160) - 80, cyp = H * (0.12 + i * 0.07);
+      cx.beginPath(); cx.ellipse(cxp, cyp, 46, 11, 0, 0, 7); cx.ellipse(cxp + 26, cyp - 7, 28, 10, 0, 0, 7); cx.fill(); } }
+  // 風のすじ
+  var n = Math.round(Math.min(streaks.length, p.ws * 1.8)), gustK = 1 + (p.wg > 8 ? 0.7 * Math.max(0, Math.sin(clock * 1.3)) : 0);
+  cx.strokeStyle = rgb(mix([190,210,225], [255,255,255], p.d), 0.75); cx.lineWidth = 1.5; cx.lineCap = "round";
+  for (i = 0; i < n; i++) { var s = streaks[i], len = (10 + p.ws * 3) * s.l, xx = ((s.x * (W + 80) + clock * (18 + p.ws * 20) * s.v * gustK * p.sign) % (W + 80) + (W + 80)) % (W + 80) - 40, yy = H * 0.1 + s.y * (hor - H * 0.16);
+    cx.beginPath(); cx.moveTo(xx, yy); cx.lineTo(xx - len * (p.sign >= 0 ? 1 : -1), yy); cx.stroke(); }
+  // 海(奥→手前)と船
+  var night = 1 - p.d, c1 = mix([86,170,200], [10,34,50], night * 0.75), c2 = mix([38,128,168], [8,28,42], night * 0.75), c3 = mix([20,90,128], [5,20,32], night * 0.75);
+  waveLayer(W, H, hor, 1.3, p.A * 0.6, rgb(c1)); waveLayer(W, H, hor + 14, 0, p.A, rgb(c2));
+  var sc = clamp(W / 360, 0.9, 1.5), seaX = W * 0.62, shoreX = W * 0.14, yb = hor + 14 + wy(seaX, 0, p.A), slope = (wy(seaX + 6, 0, p.A) - wy(seaX - 6, 0, p.A)) / 12;
+  var bx = shoreX + (seaX - shoreX) * p.launch, by = (hor - 14) + (yb + 3 - (hor - 14)) * p.launch, ba = Math.atan(slope) * p.launch + (1 - p.launch) * 0.06;
+  if (p.launch > 0.5) drawBoat(bx, by, ba, sc, 1);
+  waveLayer(W, H, hor + 36, 2.4, p.A * 0.8, rgb(c3));
+  // 岸
+  cx.fillStyle = rgb(mix([224,204,160], [58,62,60], night * 0.8)); cx.beginPath(); cx.moveTo(0, hor - 18); cx.lineTo(W * 0.15, hor - 15); cx.quadraticCurveTo(W * 0.24, hor - 6, W * 0.3, hor + 30); cx.lineTo(W * 0.34, H); cx.lineTo(0, H); cx.closePath(); cx.fill();
+  if (p.launch <= 0.5) drawBoat(bx, by, ba, sc, 0.55 + 0.45 * p.d);
+  // 吹き流し
+  var px = W * 0.05, py = hor - 18, ph = 44, dirS = p.sign >= 0 ? 1 : -1, droop = (80 - 75 * clamp(p.ws / 8, 0, 1)) * Math.PI / 180 + Math.sin(clock * 6) * 0.07 * clamp(p.ws / 3, 0, 1), L = 14 + clamp(p.ws, 0, 12) * 1.8;
+  cx.strokeStyle = rgb(mix([70,80,86], [150,160,166], night)); cx.lineWidth = 2; cx.beginPath(); cx.moveTo(px, py); cx.lineTo(px, py - ph); cx.stroke();
+  cx.save(); cx.translate(px, py - ph + 4); cx.scale(dirS, 1); cx.rotate(droop);
+  for (i = 0; i < 4; i++) { var a0 = i / 4, a1 = (i + 1) / 4; cx.fillStyle = i % 2 ? "#F4F6F5" : "#D8452F"; cx.beginPath(); cx.moveTo(L * a0, -5 + 2.500 * a0); cx.lineTo(L * a1, -5 + 2.500 * a1); cx.lineTo(L * a1, 5 - 2.500 * a1); cx.lineTo(L * a0, 5 - 2.500 * a0); cx.closePath(); cx.fill(); }
+  cx.restore();
+  // 雨・雷
+  if (p.rain > 0.05) { cx.strokeStyle = "rgba(220,232,240," + 0.5 * p.rain + ")"; cx.lineWidth = 1; for (i = 0; i < 40; i++) { var rx = ((i * 53.7 + clock * 60 * (p.sign || 0.2)) % W + W) % W, ry = (i * 37.3 + clock * 260) % H; cx.beginPath(); cx.moveTo(rx, ry); cx.lineTo(rx + 3 * (p.sign || 0.2), ry + 9); cx.stroke(); } }
+  if (p.thunder > 0.5 && !RM && (clock % 3.2) < 0.09) { cx.fillStyle = "rgba(255,255,240,.5)"; cx.fillRect(0, 0, W, H); }
+}
+function frame(ms){
+  raf = 0; if (!cur || !tgt) return;
+  var dt = lastT ? clamp((ms - lastT) / 1000, 0, 0.05) : 0.016; lastT = ms;
+  if (RM) cur = Object.assign({}, tgt); else { var e = Math.min(1, dt * 5); for (var k in tgt) cur[k] += (tgt[k] - cur[k]) * (k === "launch" ? Math.min(1, dt * 2.200) : e); clock += dt; phase += dt * 2 * Math.PI / cur.per; }
+  paint();
+  if (!RM && seaOn && !document.hidden && !$("sea").hidden) raf = requestAnimationFrame(frame);
+}
+function kick(){ if (!raf) { lastT = 0; raf = requestAnimationFrame(frame); } }
+if ("IntersectionObserver" in window) new IntersectionObserver(function(es){ seaOn = es[0].isIntersecting; if (seaOn) kick(); }).observe(cv);
+window.addEventListener("resize", kick);
+document.addEventListener("visibilitychange", function(){ if (!document.hidden) kick(); });
+// 帯をなぞって時刻を選ぶ
+(function(){
+  var box = $("scrub"), down = false;
+  function pickAt(ev){ var r = $("seastrip").getBoundingClientRect(), i = clamp(Math.floor((ev.clientX - r.left) / r.width * 16), 0, 15); if (sel.h !== i + 4) { sel.h = i + 4; drawSea(false); } }
+  box.addEventListener("pointerdown", function(ev){ if (ev.target.id === "hourrange") return; stopPlay(); down = true; try { box.setPointerCapture(ev.pointerId); } catch (e) {} pickAt(ev); });
+  box.addEventListener("pointermove", function(ev){ if (down) pickAt(ev); });
+  ["pointerup", "pointercancel"].forEach(function(n){ box.addEventListener(n, function(){ down = false; }); });
+  $("hourrange").addEventListener("input", function(){ stopPlay(); sel.h = +this.value; drawSea(false); });
+})();
+function stopPlay(){ if (playTimer) { clearInterval(playTimer); playTimer = null; } $("playbtn").textContent = "1日を再生"; }
+$("playbtn").addEventListener("click", function(){
+  if (playTimer) { stopPlay(); return; }
+  var d = viewDays[sel.di]; if (!d) return;
+  var first = Math.max(4, Math.ceil(hm(d.rise)) - 1), last = Math.min(19, Math.floor(hm(d.set)) + 1);
+  sel.h = first; drawSea(false); this.textContent = "止める";
+  playTimer = setInterval(function(){ if (sel.h >= last) { stopPlay(); return; } sel.h++; drawSea(false); }, RM ? 1200 : 800);
+});
 
 /* ---------- 地点の切り替え・お気に入り ---------- */
 function placeLabel(p){ return p.name + (p.pref ? "・" + p.pref : ""); }
@@ -486,7 +708,7 @@ function nearest8(deg){ return (Math.round((((deg % 360) + 360) % 360) / 45) % 8
 function cacheKey(p){ return "shukko:fc:" + p.lat.toFixed(3) + "," + p.lon.toFixed(3); }
 var loadSeq = 0;
 function show(p, force){
-  place = p; save("shukko:place", p); syncBar();
+  place = p; save("shukko:place", p); syncBar(); stopPlay();
   var cached = load(cacheKey(p), null), seq = ++loadSeq;
   if (cached && cached.wh) { current = cached; render(); } else clearView("予報を読み込んでいます。");
   if (!force && cached && Date.now() - cached.fetched < 3600e3) return;
