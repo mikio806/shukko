@@ -59,7 +59,10 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 .empty{background:var(--surface);border:1px dashed var(--line);border-radius:6px;padding:22px 18px;color:var(--muted)}
 
 /* 海のようす: 選んだ時刻の風・波を動く絵で見せる */
-.sea{background:var(--surface);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.strip.tap{cursor:pointer}
+.strip.tap .cell{height:28px}
+.hourly tbody tr{cursor:pointer}
+.sea{scroll-margin-top:calc(72px + env(safe-area-inset-top,0px));background:var(--surface);border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .seabox{position:relative;line-height:0}
 #seacanvas{display:block;width:100%;height:200px}
 .windchip{position:absolute;left:10px;top:10px;line-height:1.3;font-size:12px;font-weight:800;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.88);color:#0F2730;transition:background .3s,color .3s}
@@ -214,6 +217,7 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
     </div>
   </section>
   <div id="empty" class="empty">予報を読み込んでいます。</div>
+  <p class="extra" id="dayshint" hidden>色の帯の時刻や、1時間ごとの表の行をタップすると、その時刻の海のようすを上に表示します。</p>
   <section id="days" class="days"></section>
   <section class="sec" id="tidesec" hidden>
     <h2>潮時表</h2>
@@ -468,8 +472,8 @@ function render(){
   drawSea(true);
 
   var openIds = {}; Array.prototype.forEach.call(document.querySelectorAll("details.day[open]"), function(x){ openIds[x.id] = 1; });
-  var host = $("days"); host.textContent = "";
-  days.forEach(function(d){
+  var host = $("days"); host.textContent = ""; $("dayshint").hidden = false;
+  days.forEach(function(d, di){
     var L = dateLabel(d.ts), isToday = d.ts === today;
     var det = el("details","day" + ((L.dow === 6 || L.dow === 0) ? " wkend" : "")); det.id = "day-" + L.md.replace("/","-");
     if (openIds[det.id]) det.open = true;
@@ -487,6 +491,11 @@ function render(){
       strip.appendChild(el("div","cell" + (x.day ? " " + x.v : "") + ((isToday && h < nowH) ? " gone" : "")));
       ticks.appendChild(el("span","num", (h % 3 === 0) ? String(h) : ""));
     }
+    strip.classList.add("tap");
+    strip.addEventListener("click", function(ev){
+      ev.preventDefault(); ev.stopPropagation();
+      var r = strip.getBoundingClientRect(); jumpTo(di, clamp(Math.floor((ev.clientX - r.left) / r.width * 16), 0, 15) + 4);
+    });
     sum.appendChild(strip); if (d.tide) sum.appendChild(tideSvg(d, tmin, tmax)); sum.appendChild(ticks); sum.appendChild(facts(d));
     var notes = [], dl = d.hours.filter(function(x){ return x.day && x.v !== "no"; });
     if (d.verdict === "go" && spans(d.ok) !== spans(d.go)) notes.push("要注意まで含めると " + spans(d.ok));
@@ -519,6 +528,7 @@ function render(){
       if (y.chop) fl.appendChild(el("span","flag","波が細かい"));
       if (y.swell) fl.appendChild(el("span","flag","うねり"));
       tr.appendChild(fl); body.appendChild(tr);
+      (function(hour){ tr.addEventListener("click", function(){ jumpTo(di, hour); }); })(k);
     }
     t.appendChild(body); tb.appendChild(t);
     tb.appendChild(el("p","sun","風・うねりの向きは、来る方角です。"));
@@ -541,7 +551,7 @@ function render(){
   tt.appendChild(b2);
 }
 function clearView(msg){
-  current = null; viewDays = []; stopPlay(); $("sea").hidden = true; $("next").hidden = true; $("stale").hidden = true; $("tidesec").hidden = true; $("days").textContent = ""; $("meta").textContent = "";
+  current = null; viewDays = []; stopPlay(); $("sea").hidden = true; $("dayshint").hidden = true; $("next").hidden = true; $("stale").hidden = true; $("tidesec").hidden = true; $("days").textContent = ""; $("meta").textContent = "";
   var e = $("empty"); e.hidden = false; e.textContent = msg;
 }
 
@@ -602,6 +612,12 @@ function drawSea(rebuild){
     launch: (x.day && x.v !== "no") ? 1 : 0 };
   if (!cur || RM) cur = Object.assign({}, tgt);
   kick();
+}
+// 下の一覧からタップされた日・時刻を、海のようすに映す
+function jumpTo(di, h){
+  if (!viewDays[di]) return;
+  stopPlay(); sel = { di:di, h:h }; drawSea(true);
+  $("sea").scrollIntoView({ behavior: RM ? "auto" : "smooth", block:"start" });
 }
 function sizeCanvas(){
   var r = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
