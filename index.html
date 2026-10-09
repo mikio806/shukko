@@ -62,13 +62,50 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 .strip.tap{cursor:pointer}
 .strip.tap .cell{height:calc(24px*var(--fs))}
 .hourly tbody tr{cursor:pointer}
-.sea{scroll-margin-top:calc(72px + env(safe-area-inset-top,0px));background:var(--surface);border:1px solid var(--line);border-radius:6px;overflow:hidden}
-.seabox{position:relative;line-height:0}
-#seacanvas{display:block;width:100%;height:200px}
+.sea{scroll-margin-top:calc(72px + env(safe-area-inset-top,0px));background:var(--surface);border:1px solid var(--line);border-radius:6px;overflow:visible}
+.seabox{position:sticky;top:var(--barh,64px);z-index:3;line-height:0;border-radius:5px 5px 0 0;overflow:hidden;box-shadow:0 2px 0 var(--line)}
+#seacanvas{display:block;width:100%;height:172px}
 .windchip{position:absolute;left:10px;top:10px;line-height:1.3;font-size:calc(12px*var(--fs));font-weight:800;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.88);color:#0F2730;transition:background .3s,color .3s}
 .windchip.off{background:#BF3B2A;color:#fff}
 .seabody{padding:12px 14px 14px;display:flex;flex-direction:column;gap:12px}
-.seahead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.whenchip{position:absolute;left:8px;bottom:8px;display:inline-flex;align-items:center;gap:8px;line-height:1.3;padding:3px 6px 3px 10px;border-radius:99px;background:rgba(255,255,255,.92);color:#0F2730}
+.whenchip .seawhen{font-size:calc(17px*var(--fs));font-weight:600}
+.whenchip .pill{font-size:calc(13px*var(--fs));padding:2px 10px}
+.dial{position:absolute;right:8px;top:8px;display:inline-flex;align-items:center;gap:6px;line-height:1.3;padding:3px 10px 3px 3px;border-radius:99px;background:rgba(255,255,255,.92);color:#0F2730;font-size:calc(12px*var(--fs));font-weight:800}
+.dial svg{width:calc(30px*var(--fs));height:calc(30px*var(--fs));flex:none}
+.dial .ring{fill:#EDF2F1;stroke:#B8C6C5;stroke-width:1.5} .dial .n{fill:#5B6F75;font-size:7px;font-weight:700;font-family:var(--jp)}
+.dial .ar{fill:#0B5F78} .dial.off .ar{fill:#BF3B2A} .dial.off{color:#BF3B2A}
+.mgctl{display:flex;gap:6px;flex-wrap:wrap}
+.mgctl .playbtn{min-height:40px;padding:0 12px}
+.mgctl{align-items:stretch}
+#nextbtn{background:var(--go);margin-left:auto}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{background:var(--bg);border:0;padding:0 10px;font-weight:700;font-size:calc(13px*var(--fs));min-height:40px}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+/* 予報表: 左の見出し列を固定して横に動かす */
+.mgwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:6px;margin-inline:-6px;overscroll-behavior-x:contain}
+table.mg{border-collapse:separate;border-spacing:0;width:auto;font-size:calc(13px*var(--fs))}
+.mg th{position:sticky;left:0;z-index:2;background:var(--surface);text-align:left;font-size:calc(11px*var(--fs));font-weight:700;color:var(--muted);padding:2px 5px 2px 6px;white-space:nowrap;border-right:1px solid var(--line);border-top:1px solid var(--line)}
+.mg td{min-width:calc(35px*var(--fs));padding:2px 2px;text-align:center;white-space:nowrap;border-top:1px solid var(--line);border-left:1px solid transparent;cursor:pointer;font-family:var(--num);font-variant-numeric:tabular-nums;font-size:calc(15px*var(--fs));line-height:1.25}
+.mg tr:first-child th,.mg tr:first-child td{border-top:0}
+.mg td.d0{border-left:2px solid var(--line)}
+.mg td.nt{background:var(--night);color:var(--muted)}
+.mg td.gone{opacity:.45}
+.mg td.sel{background:var(--tide-soft);color:var(--ink);box-shadow:inset 2px 0 0 var(--ink),inset -2px 0 0 var(--ink)}
+.mg tr:nth-child(2) td.sel{box-shadow:inset 2px 0 0 var(--ink),inset -2px 0 0 var(--ink),inset 0 2px 0 var(--ink)}
+.mg tr:last-child td.sel{box-shadow:inset 2px 0 0 var(--ink),inset -2px 0 0 var(--ink),inset 0 -2px 0 var(--ink)}
+.mg td.dayh{text-align:left;cursor:default;padding:3px 0;font-family:var(--jp);border-left:2px solid var(--line);background:var(--bg)}
+.mg td.dayh span.in{position:sticky;left:calc(46px*var(--fs));display:inline-flex;gap:8px;align-items:center;padding:0 8px;font-weight:800;font-size:calc(14px*var(--fs))}
+.mg td.dayh .pill{font-size:calc(11px*var(--fs))}
+.mg td.dayh .sh{font-weight:700;color:var(--tide);font-size:calc(12px*var(--fs))}
+.mg .r-hr td{font-size:calc(13px*var(--fs));color:var(--muted);font-weight:600}
+.mg .vs{display:flex;gap:1px;height:calc(18px*var(--fs))} .mg .vs i{flex:1;border-radius:2px;background:var(--night)}
+.mg .vs i.go{background:var(--go)} .mg .vs i.ok{background:var(--ok)} .mg .vs i.no{background:var(--no)}
+.mg td.t-ok{background:var(--ok-soft)} .mg td.t-no{background:var(--no-soft);font-weight:700}
+.mg td.sel.t-ok{background:var(--ok-soft)} .mg td.sel.t-no{background:var(--no-soft)}
+.mg .arr{width:calc(20px*var(--fs));height:calc(20px*var(--fs));display:block;margin:0 auto;fill:var(--accent)} .mg .arr.off{fill:var(--no)}
+.mg .wx{margin:0 auto;display:block}
+.mg .r-td td{font-size:calc(13px*var(--fs))} .mg .r-td .ev{display:block;font-size:calc(11px*var(--fs));font-weight:700;color:var(--tide);font-family:var(--jp)}
 .seawhen{font-size:calc(24px*var(--fs));font-weight:600}
 .seahead .pill{font-size:calc(14px*var(--fs));padding:3px 12px;transition:background .3s,color .3s}
 .pill.nt{background:var(--night);color:var(--muted)}
@@ -101,7 +138,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 .sheet{animation:sheetup .22s ease-out}
 .icon.on svg{animation:pop .3s ease-out}
 details.day[open] .tablebox{animation:fadein .25s ease-out}
-@media (prefers-reduced-motion: reduce){ .sheet,.icon.on svg,details.day[open] .tablebox{animation:none} .track i,.scrub .strip .cell{transition:none} }
+@media (prefers-reduced-motion: reduce){ .sheet,.icon.on svg,details.day[open] .tablebox{animation:none} .track i{transition:none} }
 
 .days{display:flex;flex-direction:column;gap:8px}
 details.day{background:var(--surface);border:1px solid var(--line);border-radius:6px}
@@ -206,11 +243,18 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
 
 <main class="wrap">
   <div id="stale" class="stale" hidden></div>
-  <section id="next" class="next" hidden></section>
   <section id="sea" class="sea" hidden>
-    <div class="seabox"><canvas id="seacanvas" role="img" aria-label="選んだ時刻の海のようす"></canvas><span class="windchip" id="windchip"></span></div>
+    <div class="seabox"><canvas id="seacanvas" role="img" aria-label="選んだ時刻の海のようす"></canvas><span class="windchip" id="windchip"></span>
+      <span class="whenchip"><span class="seawhen num" id="seawhen"></span><span class="pill" id="seaverdict"></span></span>
+      <span class="dial" id="dial"></span></div>
     <div class="seabody">
-      <div class="seahead"><span class="seawhen num" id="seawhen"></span><span class="pill" id="seaverdict"></span></div>
+      <div class="mgctl">
+        <div class="seg" id="stepseg"><button type="button" data-step="3">3時間</button><button type="button" data-step="1">1時間</button></div>
+        <button class="playbtn" id="nextbtn" type="button">次の出航可へ</button>
+        <button class="playbtn" id="playbtn" type="button">再生</button>
+      </div>
+      <div class="mgwrap" id="mgwrap"><table class="mg" id="mg"></table></div>
+      <p class="seaextra">表は横に動かせます(7日分)。列をタップすると、上の絵がその時刻の海のようすに変わります。単位は、風・突風が m/s、波・うねりが m、間隔が秒、気温・水温が ℃、潮が cm です。風の矢印は風が吹いていく向きで、赤い矢印は出し風。潮の▲は満潮、▼は干潮の時刻です。</p>
       <p class="why" id="seawhy"></p>
       <div class="gauges">
         <div class="gauge"><div class="gl"><span>風</span><span class="gv num" id="gwind"></span></div><div class="track" style="--z1:41.7%;--z2:66.7%"><i id="mwind"></i></div></div>
@@ -219,17 +263,11 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
       </div>
       <p class="wxline" id="seawx"></p>
       <p class="seaextra" id="seaextra"></p>
-      <div class="scrub" id="scrub">
-        <div class="strip" id="seastrip"></div>
-        <div class="ticks" id="seaticks"></div>
-        <label class="sr" for="hourrange">時刻</label><input class="sr" type="range" id="hourrange" min="4" max="19" step="1">
-      </div>
-      <p class="seaextra">色の帯を指でなぞると、その時刻の海のようすに変わります。</p>
-      <div class="seactl"><button class="playbtn" id="playbtn" type="button">1日を再生</button><div class="chips" id="chips"></div></div>
     </div>
   </section>
+  <section id="next" class="next" hidden></section>
   <div id="empty" class="empty">予報を読み込んでいます。</div>
-  <p class="extra" id="dayshint" hidden>色の帯の時刻や、1時間ごとの表の行をタップすると、その時刻の海のようすを上に表示します。</p>
+  <p class="extra" id="dayshint" hidden>日ごとのまとめです。色の帯の時刻や、1時間ごとの表の行をタップすると、その時刻の海のようすを上に表示します。</p>
   <section id="days" class="days"></section>
   <section class="sec" id="tidesec" hidden>
     <h2>潮時表</h2>
@@ -596,9 +634,9 @@ function render(){
       tr.appendChild(el("td","num" + (y.pp >= 50 ? " over" : ""), y.pp != null ? y.pp + "%" : "—"));
       var w = el("td"); w.appendChild(document.createTextNode(dirName(y.dir) + " ")); w.appendChild(el("span","num" + (y.ws > LIMITS.goWind ? " over" : ""), y.ws.toFixed(1))); tr.appendChild(w);
       tr.appendChild(el("td","num" + (y.gust ? " over" : ""), y.wg.toFixed(1)));
-      tr.appendChild(el("td","num" + (y.wh > LIMITS.goWave ? " over" : ""), y.wh.toFixed(2)));
+      tr.appendChild(el("td","num" + (y.wh > LIMITS.goWave ? " over" : ""), y.wh.toFixed(1)));
       tr.appendChild(el("td","num", y.wp.toFixed(1)));
-      var sw = el("td"); sw.appendChild(document.createTextNode(dirName(y.sd) + " ")); sw.appendChild(el("span","num", y.sh.toFixed(2))); tr.appendChild(sw);
+      var sw = el("td"); sw.appendChild(document.createTextNode(dirName(y.sd) + " ")); sw.appendChild(el("span","num", y.sh.toFixed(1))); tr.appendChild(sw);
       tr.appendChild(el("td","num" + (y.swell ? " over" : ""), y.sp.toFixed(1)));
       tr.appendChild(el("td","num", y.tide != null ? String(y.tide) : "—"));
       var fl = el("td");
@@ -666,28 +704,21 @@ function drawSea(rebuild){
   $("seawhen").textContent = L.md + "(" + L.w + ") " + sel.h + ":00";
   var pv = $("seaverdict"); pv.className = "pill " + (x.day ? x.v : "nt"); pv.textContent = x.day ? VNAME[x.v] : "夜";
   $("seawhy").textContent = whyText(x);
-  setGauge("gwind", "mwind", x.ws, 12, 1); setGauge("ggust", "mgust", x.wg, 16, 1); setGauge("gwave", "mwave", x.wh, 1.2, 2);
+  setGauge("gwind", "mwind", x.ws, 12, 1); setGauge("ggust", "mgust", x.wg, 16, 1); setGauge("gwave", "mwave", x.wh, 1.2, 1);
   var chip = $("windchip"), offshore = x.off;
   chip.className = "windchip" + (offshore ? " off" : "");
   chip.textContent = x.ws < 1 ? "ほぼ無風" : offshore ? "出し風 → 沖へ流される" : along > 0.35 ? "陸から沖への風" : along < -0.35 ? "海から岸への風" : "岸に沿う横風";
   var sw = $("seawx"), wi = wxInfo(x.wc); sw.textContent = ""; sw.appendChild(wxIcon(wi.k)); sw.appendChild(el("span", "wxname", wi.t));
   [["気温", x.tp != null ? Math.round(x.tp) + "℃" : null], ["降水", x.pp != null ? x.pp + "%" + (x.pr > 0 ? "・" + x.pr.toFixed(1) + "mm" : "") : null], ["水温", x.sst != null ? x.sst.toFixed(1) + "℃" : null]].forEach(function(q){
     if (q[1] == null) return; var sp = el("span"); sp.appendChild(el("b", null, q[0])); sp.appendChild(el("span", "num", q[1])); sw.appendChild(sp); });
-  $("seaextra").textContent = dirName(x.dir) + "の風。波は" + dirName(x.wd != null ? x.wd : x.sd) + "から、周期" + x.wp.toFixed(1) + "秒。うねり" + x.sh.toFixed(2) + "m(周期" + x.sp.toFixed(1) + "秒)" + (x.tide != null ? "。潮位" + x.tide + "cm" : "") + "。";
-  if (rebuild || stripDay !== sel.di) {
-    stripDay = sel.di;
-    var st = $("seastrip"), tk = $("seaticks"); st.textContent = ""; tk.textContent = "";
-    for (var h = 4; h <= 19; h++) { var c = d.hours[h]; st.appendChild(el("div", "cell" + (c.day ? " " + c.v : "") + ((d.ts === viewToday && h < viewNowH) ? " gone" : ""))); tk.appendChild(el("span", "num", (h % 3 === 0) ? String(h) : "")); }
-    var ch = $("chips"); ch.textContent = "";
-    viewDays.forEach(function(dd, i){
-      var LL = dateLabel(dd.ts), b = el("button", dd.verdict); b.type = "button"; b.setAttribute("aria-pressed", String(i === sel.di));
-      b.appendChild(el("span", "num", LL.md)); b.appendChild(document.createTextNode(dd.ts === viewToday ? "今日" : LL.w + "曜"));
-      b.addEventListener("click", function(){ stopPlay(); var dn = viewDays[i]; sel = { di:i, h: dn.go.length ? dn.go[0].from : dn.ok.length ? dn.ok[0].from : clamp(sel.h, Math.ceil(hm(dn.rise)), Math.floor(hm(dn.set))) }; drawSea(true); });
-      ch.appendChild(b);
-    });
-  }
-  Array.prototype.forEach.call($("seastrip").children, function(c, i){ c.classList.toggle("sel", i === sel.h - 4); });
-  $("hourrange").value = String(sel.h);
+  $("seaextra").textContent = dirName(x.dir) + "の風。波は" + dirName(x.wd != null ? x.wd : x.sd) + "から、周期" + x.wp.toFixed(1) + "秒。うねり" + x.sh.toFixed(1) + "m(周期" + x.sp.toFixed(1) + "秒)" + (x.tide != null ? "。潮位" + x.tide + "cm" : "") + "。";
+  var dl = $("dial"); dl.textContent = ""; dl.className = "dial" + (offshore ? " off" : "");
+  var ds = svg("svg", { viewBox:"0 0 40 40", role:"img", "aria-label":"風向き" }); ds.appendChild(svg("circle", { cx:20, cy:20, r:18.5, "class":"ring" }));
+  var nt = svg("text", { x:20, y:9, "text-anchor":"middle", "class":"n" }); nt.textContent = "北"; ds.appendChild(nt);
+  var dg = svg("g", { transform:"rotate(" + ((x.dir + 180) % 360) + " 20 20)" }); dg.appendChild(svg("path", { d:"M20 9 L27 22 H22.5 V32 H17.5 V22 H13 Z", "class":"ar" })); ds.appendChild(dg);
+  dl.appendChild(ds); dl.appendChild(el("span", null, x.ws < 1 ? "無風" : dirName(x.dir) + "の風"));
+  if (rebuild) { buildMeteo(); $("nextbtn").textContent = "次の出航可へ"; }
+  markMeteo(rebuild);
   var dayness = clamp((sel.h - (rise - 0.7)) / 1.2, 0, 1) * clamp(((set + 0.7) - sel.h) / 1.2, 0, 1);
   var tl = 999, th = -999; viewDays.forEach(function(q){ if (q.tide) q.tide.h.forEach(function(v){ tl = Math.min(tl, v); th = Math.max(th, v); }); });
   tgt = { A: clamp(x.wh * 18, 1, 28), lam: 50 + x.wp * 16, per: Math.max(1.6, x.wp * 0.6), ws: x.ws, wg: x.wg,
@@ -802,22 +833,66 @@ function kick(){ if (!raf) { lastT = 0; raf = requestAnimationFrame(frame); } }
 if ("IntersectionObserver" in window) new IntersectionObserver(function(es){ seaOn = es[0].isIntersecting; if (seaOn) kick(); }).observe(cv);
 window.addEventListener("resize", kick);
 document.addEventListener("visibilitychange", function(){ if (!document.hidden) kick(); });
-// 帯をなぞって時刻を選ぶ
-(function(){
-  var box = $("scrub"), down = false;
-  function pickAt(ev){ var r = $("seastrip").getBoundingClientRect(), i = clamp(Math.floor((ev.clientX - r.left) / r.width * 16), 0, 15); if (sel.h !== i + 4) { sel.h = i + 4; drawSea(false); } }
-  box.addEventListener("pointerdown", function(ev){ if (ev.target.id === "hourrange") return; stopPlay(); down = true; try { box.setPointerCapture(ev.pointerId); } catch (e) {} pickAt(ev); });
-  box.addEventListener("pointermove", function(ev){ if (down) pickAt(ev); });
-  ["pointerup", "pointercancel"].forEach(function(n){ box.addEventListener(n, function(){ down = false; }); });
-  $("hourrange").addEventListener("input", function(){ stopPlay(); sel.h = +this.value; drawSea(false); });
-})();
-function stopPlay(){ if (playTimer) { clearInterval(playTimer); playTimer = null; } $("playbtn").textContent = "1日を再生"; }
+// 予報表(横スクロール): 列=時刻、行=判定・天気・気温・風・波・うねり・水温・潮
+var mgStep = +load("shukko:step", 3) === 1 ? 1 : 3, mgCols = [];
+function arrowSvg(deg, off){ var s = svg("svg", { viewBox:"0 0 20 20", "class":"arr" + (off ? " off" : "") }), g = svg("g", { transform:"rotate(" + ((deg + 180) % 360) + " 10 10)" }); g.appendChild(svg("path", { d:"M10 2 L15 10.5 H11.6 V18 H8.4 V10.5 H5 Z" })); s.appendChild(g); return s; }
+function buildMeteo(){
+  var t = $("mg"), rows = {}; t.textContent = ""; mgCols = [];
+  [["day","日付"],["hr","時刻"],["v","判定"],["wx","天気"],["tp","気温"],["ws","風"],["wd","風向"],["wg","突風"],["wh","波"],["sh","うねり"],["sp","間隔"],["sst","水温"],["td","潮"]].forEach(function(q){
+    var tr = el("tr", "r-" + q[0]); tr.appendChild(el("th", null, q[1])); rows[q[0]] = tr; t.appendChild(tr); });
+  viewDays.forEach(function(d, di){
+    var L = dateLabel(d.ts), n = 0;
+    for (var h = 0; h < 24; h += mgStep) {
+      var x = d.hours[h], ci = mgCols.length, base = (h === 0 ? " d0" : "") + (x.day ? "" : " nt") + ((d.ts === viewToday && h + mgStep <= viewNowH) ? " gone" : "");
+      mgCols.push({ di:di, h:h }); n++;
+      var add = function(key, content, cls){ var td = el("td", (cls || "") + base); td.setAttribute("data-c", ci); if (content != null && typeof content === "object") td.appendChild(content); else td.textContent = content == null ? "—" : content; rows[key].appendChild(td); return td; };
+      add("hr", String(h));
+      var vs = el("div", "vs"); for (var k = 0; k < mgStep; k++) { var y = d.hours[h + k]; vs.appendChild(el("i", y.day ? y.v : "")); } add("v", vs);
+      add("wx", wxIcon(wxInfo(x.wc).k));
+      add("tp", x.tp != null ? String(Math.round(x.tp)) : null);
+      add("ws", x.ws.toFixed(1), x.ws > LIMITS.okWind ? "t-no" : x.ws > LIMITS.goWind ? "t-ok" : "");
+      add("wd", x.ws < 1 ? "・" : arrowSvg(x.dir, x.off));
+      add("wg", x.wg.toFixed(1), x.gust ? "t-no" : "");
+      add("wh", x.wh.toFixed(1), x.wh > LIMITS.okWave ? "t-no" : x.wh > LIMITS.goWave ? "t-ok" : "");
+      add("sh", x.sh.toFixed(1)); add("sp", x.sp.toFixed(1), x.swell ? "t-ok" : "");
+      add("sst", x.sst != null ? x.sst.toFixed(1) : null);
+      var tdc = el("span", null, x.tide != null ? String(x.tide) : "—"), ev = "";
+      if (d.tide) { d.tide.hi.forEach(function(e){ var eh = hm(e[0]); if (eh >= h && eh < h + mgStep) ev = "▲" + hhmm(e[0]); }); d.tide.lo.forEach(function(e){ var eh = hm(e[0]); if (eh >= h && eh < h + mgStep) ev = "▼" + hhmm(e[0]); }); }
+      var box = el("span"); box.appendChild(tdc); box.appendChild(el("span", "ev", ev || "\u00a0")); add("td", box);
+    }
+    var dh = el("td", "dayh"); dh.colSpan = n; var inn = el("span", "in"); inn.appendChild(document.createTextNode(L.md + "(" + L.w + ")" + (d.ts === viewToday ? " 今日" : "")));
+    inn.appendChild(el("span", "pill " + d.verdict, VNAME[d.verdict])); inn.appendChild(el("span", "sh", d.shio)); dh.appendChild(inn); rows.day.appendChild(dh);
+  });
+  Array.prototype.forEach.call($("stepseg").children, function(b){ b.setAttribute("aria-pressed", String(+b.dataset.step === mgStep)); });
+}
+function selCol(){ var h = Math.floor(sel.h / mgStep) * mgStep; for (var i = 0; i < mgCols.length; i++) if (mgCols[i].di === sel.di && mgCols[i].h === h) return i; return -1; }
+function markMeteo(scroll){
+  var t = $("mg"), i = selCol();
+  Array.prototype.forEach.call(t.querySelectorAll("td.sel"), function(c){ c.classList.remove("sel"); });
+  var cells = t.querySelectorAll('td[data-c="' + i + '"]'); Array.prototype.forEach.call(cells, function(c){ c.classList.add("sel"); });
+  if (!cells.length) return;
+  var w = $("mgwrap"), c0 = cells[0], th = t.querySelector("th").offsetWidth, left = c0.offsetLeft, vis = left >= w.scrollLeft + th && left + c0.offsetWidth <= w.scrollLeft + w.clientWidth;
+  if (scroll || !vis) { var to = Math.max(0, left - th - (w.clientWidth - th) / 2 + c0.offsetWidth / 2); if (w.scrollTo && !RM && !scroll) w.scrollTo({ left:to, behavior:"smooth" }); else w.scrollLeft = to; }
+}
+$("mg").addEventListener("click", function(ev){
+  var td = ev.target.closest ? ev.target.closest("td[data-c]") : null; if (!td) return;
+  var c = mgCols[+td.getAttribute("data-c")]; if (!c) return;
+  stopPlay(); sel = { di:c.di, h:c.h }; drawSea(false);
+});
+Array.prototype.forEach.call($("stepseg").children, function(b){ b.addEventListener("click", function(){ mgStep = +b.dataset.step; save("shukko:step", mgStep); stopPlay(); drawSea(true); }); });
+$("nextbtn").addEventListener("click", function(){
+  stopPlay();
+  for (var i = 0; i < viewDays.length; i++) { var d = viewDays[i];
+    for (var j = 0; j < d.go.length; j++) { var r = d.go[j]; if (d.ts !== viewToday || r.to > viewNowH) { sel = { di:i, h: d.ts === viewToday ? Math.max(r.from, Math.min(viewNowH, r.to)) : r.from }; drawSea(true); return; } } }
+  this.textContent = "出航可の時間なし";
+});
+function stopPlay(){ if (playTimer) { clearInterval(playTimer); playTimer = null; } $("playbtn").textContent = "再生"; }
 $("playbtn").addEventListener("click", function(){
   if (playTimer) { stopPlay(); return; }
   var d = viewDays[sel.di]; if (!d) return;
-  var first = Math.max(4, Math.ceil(hm(d.rise)) - 1), last = Math.min(19, Math.floor(hm(d.set)) + 1);
+  var first = Math.max(0, Math.ceil(hm(d.rise)) - 1), last = Math.min(23, Math.floor(hm(d.set)) + 1);
   sel.h = first; drawSea(false); this.textContent = "止める";
-  playTimer = setInterval(function(){ if (sel.h >= last) { stopPlay(); return; } sel.h++; drawSea(false); }, RM ? 1200 : 800);
+  playTimer = setInterval(function(){ if (sel.h >= last) { stopPlay(); return; } sel.h++; drawSea(false); }, RM ? 2000 : 1500);
 });
 
 /* ---------- 地点の切り替え・お気に入り ---------- */
@@ -933,10 +1008,14 @@ Array.prototype.forEach.call(sheet.querySelectorAll("[role=tab]"), function(b){ 
 /* ---------- 文字の大きさ ---------- */
 function setSize(v){
   document.documentElement.style.setProperty("--fs", String(v)); save("shukko:fs", v);
+  setTimeout(function(){ var b = document.querySelector(".bar"); if (b) document.documentElement.style.setProperty("--barh", b.offsetHeight + "px"); }, 0);
   Array.prototype.forEach.call($("sizes").children, function(b){ b.setAttribute("aria-pressed", String(+b.dataset.fs === +v)); });
 }
 Array.prototype.forEach.call($("sizes").children, function(b){ b.addEventListener("click", function(){ setSize(+b.dataset.fs); }); });
 setSize(load("shukko:fs", 1.25));
+
+function syncBarH(){ document.documentElement.style.setProperty("--barh", document.querySelector(".bar").offsetHeight + "px"); }
+window.addEventListener("resize", syncBarH); syncBarH();
 
 /* ---------- 起動 ---------- */
 show(place, false);
