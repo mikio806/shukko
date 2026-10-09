@@ -199,6 +199,9 @@ tr.night td{color:var(--muted)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--ink)}
 .rules ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
 .rules p{margin:0;max-width:65ch}
+.crit{align-items:flex-start}
+.critgrid{flex-basis:100%;display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center}
+.critgrid input{width:calc(72px*var(--fs));background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 8px;font-size:16px;font-family:var(--num);text-align:right}
 .sizes{display:flex;gap:6px}
 .sizes button{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 14px;font-weight:700;min-height:44px}
 .sizes button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
@@ -257,9 +260,9 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
       <p class="seaextra">表は横に動かせます(7日分)。列をタップすると、上の絵がその時刻の海のようすに変わります。単位は、風・突風が m/s、波・うねりが m、間隔が秒、気温・水温が ℃、潮が cm です。風の矢印は風が吹いていく向きで、赤い矢印は出し風。潮の▲は満潮、▼は干潮の時刻です。</p>
       <p class="why" id="seawhy"></p>
       <div class="gauges">
-        <div class="gauge"><div class="gl"><span>風</span><span class="gv num" id="gwind"></span></div><div class="track" style="--z1:41.7%;--z2:66.7%"><i id="mwind"></i></div></div>
-        <div class="gauge"><div class="gl"><span>突風</span><span class="gv num" id="ggust"></span></div><div class="track" style="--z1:50%;--z2:50%"><i id="mgust"></i></div></div>
-        <div class="gauge"><div class="gl"><span>波</span><span class="gv num" id="gwave"></span></div><div class="track" style="--z1:41.7%;--z2:58.3%"><i id="mwave"></i></div></div>
+        <div class="gauge"><div class="gl"><span>風</span><span class="gv num" id="gwind"></span></div><div class="track" id="twind" style="--z1:41.7%;--z2:66.7%"><i id="mwind"></i></div></div>
+        <div class="gauge"><div class="gl"><span>突風</span><span class="gv num" id="ggust"></span></div><div class="track" id="tgust" style="--z1:50%;--z2:50%"><i id="mgust"></i></div></div>
+        <div class="gauge"><div class="gl"><span>波</span><span class="gv num" id="gwave"></span></div><div class="track" id="twave" style="--z1:41.7%;--z2:58.3%"><i id="mwave"></i></div></div>
       </div>
       <p class="wxline" id="seawx"></p>
       <p class="seaextra" id="seaextra"></p>
@@ -281,16 +284,28 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
     <div class="setrow"><label for="bearing">海の方角(岸から見て海がある向き)</label>
       <select id="bearing"></select></div>
     <p>出し風(陸から沖へ吹く風)の判定に使います。地点リストの値は目安なので、実際の浜の向きに合わせて直してください。</p>
-    <h2>判定の基準(2馬力ゴムボート向け)</h2>
+    <h2>判定の基準</h2>
+    <div class="setrow crit">
+      <label for="boat">船の種類</label>
+      <select id="boat"><option value="gomu">ゴムボート(2馬力)</option><option value="small">小型ボート(船外機つき)</option><option value="kayak">カヤック・SUP</option><option value="custom">自分で決める</option></select>
+      <div class="critgrid">
+        <label for="c-goWind">出航可の風</label><span><input type="number" id="c-goWind" min="1" max="12" step="0.5" inputmode="decimal"> m/s以下</span>
+        <label for="c-goWave">出航可の波</label><span><input type="number" id="c-goWave" min="0.1" max="1.5" step="0.1" inputmode="decimal"> m以下</span>
+        <label for="c-okWind">要注意の風</label><span><input type="number" id="c-okWind" min="1" max="15" step="0.5" inputmode="decimal"> m/s以下</span>
+        <label for="c-okWave">要注意の波</label><span><input type="number" id="c-okWave" min="0.1" max="2" step="0.1" inputmode="decimal"> m以下</span>
+        <label for="c-gust">突風の上限</label><span><input type="number" id="c-gust" min="2" max="20" step="0.5" inputmode="decimal"> m/s</span>
+      </div>
+    </div>
+    <p>船の種類を選ぶと目安の数値が入ります。数値を直接変えると「自分で決める」になります。設定はこの端末だけに保存され、ほかの人の画面には影響しません。目安は一般的な値なので、自分の船と腕に合わせて控えめに決めてください。</p>
     <div class="legend">
-      <span><i class="mark go"></i>出航可 風5m/s以下・波0.5m以下</span>
-      <span><i class="mark ok"></i>要注意 風8m/s以下・波0.7m以下(短時間・岸寄りのみ)</span>
+      <span><i class="mark go"></i><span id="lg-go"></span></span>
+      <span><i class="mark ok"></i><span id="lg-ok"></span></span>
       <span><i class="mark no"></i>中止 それを超える、または雷</span>
       <span><i class="mark"></i>夜(日の出前・日没後)</span>
     </div>
     <ul>
       <li>時間帯は、2時間以上つづく場合だけ表示します。</li>
-      <li>突風が8m/sを超える時間は、風と波が基準内でも「要注意」に下げます。</li>
+      <li id="lg-gust"></li>
       <li>出し風は風が弱くても沖へ流されます。岸を離れすぎないでください。</li>
       <li>波の周期が4秒未満で波高0.4m以上のときは「波が細かい」と表示します。船が叩かれやすい状態です。</li>
       <li>天気・気温・降水確率・水温は、選んだ地点(海側)の予報です。日ごとの天気は日の出から日没までをまとめたものです。</li>
@@ -345,7 +360,9 @@ var PRESETS = [
 var DEFAULT_ID = "p:福井鮎川(国見)";
 
 /* ---------- 判定ロジック ---------- */
+var BOATS = { gomu:{ goWind:5, goWave:0.5, okWind:8, okWave:0.7, gust:8 }, small:{ goWind:7, goWave:0.8, okWind:10, okWave:1.0, gust:12 }, kayak:{ goWind:3, goWave:0.3, okWind:5, okWave:0.5, gust:6 } };
 var LIMITS = { goWind:5, goWave:0.5, okWind:8, okWave:0.7, gust:8, swellSec:8, swellM:0.3, offSpread:70, offMin:2 };
+function fmtN(v){ return String(Math.round(v * 10) / 10); }
 var DIRS = ["北","北東","東","南東","南","南西","西","北西"];
 function dirName(deg){ return DIRS[Math.round((((deg % 360) + 360) % 360) / 45) % 8]; }
 function hm(s){ var p = s.split(":"); return +p[0] + (+p[1]) / 60; }
@@ -614,7 +631,7 @@ function render(){
     var notes = [], dl = d.hours.filter(function(x){ return x.day && x.v !== "no"; });
     if (d.verdict === "go" && spans(d.ok) !== spans(d.go)) notes.push("要注意まで含めると " + spans(d.ok));
     if (dl.some(function(x){ return x.off; })) notes.push("出し風の時間あり");
-    if (dl.some(function(x){ return x.gust; })) notes.push("突風8m/s超の時間あり");
+    if (dl.some(function(x){ return x.gust; })) notes.push("突風" + fmtN(LIMITS.gust) + "m/s超の時間あり");
     if (dl.some(function(x){ return x.swell; })) notes.push("うねりの時間あり");
     if (d.hours.some(function(x){ return x.day && x.thunder; })) notes.push("雷の予報あり");
     if (d.hours.some(function(x){ return x.day && x.fog; })) notes.push("霧の時間あり");
@@ -687,9 +704,9 @@ function whyText(x){
   if (!x.day) return "日の出前・日没後なので、出航しない時間です。";
   var a = [];
   if (x.thunder) a.push("雷の予報");
-  if (x.ws > LIMITS.okWind) a.push("風が8m/s超"); else if (x.ws > LIMITS.goWind) a.push("風が5m/s超");
-  if (x.wh > LIMITS.okWave) a.push("波が0.7m超"); else if (x.wh > LIMITS.goWave) a.push("波が0.5m超");
-  if (x.gust) a.push("突風が8m/s超");
+  if (x.ws > LIMITS.okWind) a.push("風が" + fmtN(LIMITS.okWind) + "m/s超"); else if (x.ws > LIMITS.goWind) a.push("風が" + fmtN(LIMITS.goWind) + "m/s超");
+  if (x.wh > LIMITS.okWave) a.push("波が" + fmtN(LIMITS.okWave) + "m超"); else if (x.wh > LIMITS.goWave) a.push("波が" + fmtN(LIMITS.goWave) + "m超");
+  if (x.gust) a.push("突風が" + fmtN(LIMITS.gust) + "m/s超");
   if (x.fog) a.push("霧(見通し不良)");
   return a.length ? a.join("、") + "のため" + VNAME[x.v] + "です。" : "風も波も基準内です。";
 }
@@ -704,7 +721,7 @@ function drawSea(rebuild){
   $("seawhen").textContent = L.md + "(" + L.w + ") " + sel.h + ":00";
   var pv = $("seaverdict"); pv.className = "pill " + (x.day ? x.v : "nt"); pv.textContent = x.day ? VNAME[x.v] : "夜";
   $("seawhy").textContent = whyText(x);
-  setGauge("gwind", "mwind", x.ws, 12, 1); setGauge("ggust", "mgust", x.wg, 16, 1); setGauge("gwave", "mwave", x.wh, 1.2, 1);
+  setGauge("gwind", "mwind", x.ws, LIMITS.okWind * 1.5, 1); setGauge("ggust", "mgust", x.wg, LIMITS.gust * 2, 1); setGauge("gwave", "mwave", x.wh, LIMITS.okWave * 1.7, 1);
   var chip = $("windchip"), offshore = x.off;
   chip.className = "windchip" + (offshore ? " off" : "");
   chip.textContent = x.ws < 1 ? "ほぼ無風" : offshore ? "出し風 → 沖へ流される" : along > 0.35 ? "陸から沖への風" : along < -0.35 ? "海から岸への風" : "岸に沿う横風";
@@ -1004,6 +1021,27 @@ $("usepin").addEventListener("click", function(){
 $("placebtn").addEventListener("click", function(){ openSheet(); });
 $("closesheet").addEventListener("click", closeSheet);
 Array.prototype.forEach.call(sheet.querySelectorAll("[role=tab]"), function(b){ b.addEventListener("click", function(){ setTab(b.dataset.tab); }); });
+
+/* ---------- 判定の基準(船に合わせて変える) ---------- */
+var CKEYS = ["goWind", "goWave", "okWind", "okWave", "gust"];
+function applyCrit(boat, vals, redraw){
+  CKEYS.forEach(function(k){ var v = +vals[k]; if (isFinite(v) && v > 0) LIMITS[k] = v; });
+  if (LIMITS.okWind < LIMITS.goWind) LIMITS.okWind = LIMITS.goWind;
+  if (LIMITS.okWave < LIMITS.goWave) LIMITS.okWave = LIMITS.goWave;
+  var cur = {}; CKEYS.forEach(function(k){ cur[k] = LIMITS[k]; $("c-" + k).value = fmtN(LIMITS[k]); });
+  $("boat").value = boat; save("shukko:crit", { boat:boat, v:cur });
+  $("lg-go").textContent = "出航可 風" + fmtN(LIMITS.goWind) + "m/s以下・波" + fmtN(LIMITS.goWave) + "m以下";
+  $("lg-ok").textContent = "要注意 風" + fmtN(LIMITS.okWind) + "m/s以下・波" + fmtN(LIMITS.okWave) + "m以下(短時間・岸寄りのみ)";
+  $("lg-gust").textContent = "突風が" + fmtN(LIMITS.gust) + "m/sを超える時間は、風と波が基準内でも「要注意」に下げます。";
+  var pc = function(a, b){ return (clamp(a / b, 0, 1) * 100).toFixed(1) + "%"; };
+  $("twind").style.cssText = "--z1:" + pc(LIMITS.goWind, LIMITS.okWind * 1.5) + ";--z2:" + pc(LIMITS.okWind, LIMITS.okWind * 1.5);
+  $("tgust").style.cssText = "--z1:50%;--z2:50%";
+  $("twave").style.cssText = "--z1:" + pc(LIMITS.goWave, LIMITS.okWave * 1.7) + ";--z2:" + pc(LIMITS.okWave, LIMITS.okWave * 1.7);
+  if (redraw) { selKey = ""; render(); }
+}
+$("boat").addEventListener("change", function(){ var b = this.value; applyCrit(b, BOATS[b] || LIMITS, true); });
+CKEYS.forEach(function(k){ $("c-" + k).addEventListener("change", function(){ var v = {}; CKEYS.forEach(function(q){ v[q] = $("c-" + q).value; }); applyCrit("custom", v, true); }); });
+(function(){ var s = load("shukko:crit", null); if (s && s.v && (BOATS[s.boat] || s.boat === "custom")) applyCrit(s.boat, s.boat === "custom" ? s.v : BOATS[s.boat], false); else applyCrit("gomu", BOATS.gomu, false); })();
 
 /* ---------- 文字の大きさ ---------- */
 function setSize(v){
