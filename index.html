@@ -105,7 +105,12 @@ table.mg{border-collapse:separate;border-spacing:0;width:auto;font-size:calc(13p
 .mg td.sel.t-ok{background:var(--ok-soft)} .mg td.sel.t-no{background:var(--no-soft)}
 .mg .arr{width:calc(20px*var(--fs));height:calc(20px*var(--fs));display:block;margin:0 auto;fill:var(--accent)} .mg .arr.off{fill:var(--no)}
 .mg .wx{margin:0 auto;display:block}
-.mg .r-td td{font-size:calc(13px*var(--fs))} .mg .r-td .ev{display:block;font-size:calc(11px*var(--fs));font-weight:700;color:var(--tide);font-family:var(--jp)}
+.mg .r-td td{padding:0}
+.mg .r-td td.tc0{position:relative;z-index:1;overflow:visible}
+.mg .tidecurve{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;max-width:none}
+.mg .tidecurve .ta{fill:var(--tide);opacity:.16} .mg .tidecurve .tl{fill:none;stroke:var(--tide);stroke-width:2;stroke-linejoin:round}
+.mg .tidecurve .th{fill:var(--tide)} .mg .tidecurve .tw{fill:var(--surface);stroke:var(--tide);stroke-width:1.5}
+.mg .tidecurve .tt{fill:var(--ink);font-weight:700;font-family:var(--jp)}
 .seawhen{font-size:calc(24px*var(--fs));font-weight:600}
 .seahead .pill{font-size:calc(14px*var(--fs));padding:3px 12px;transition:background .3s,color .3s}
 .pill.nt{background:var(--night);color:var(--muted)}
@@ -257,7 +262,7 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
         <button class="playbtn" id="playbtn" type="button">再生</button>
       </div>
       <div class="mgwrap" id="mgwrap"><table class="mg" id="mg"></table></div>
-      <p class="seaextra">表は横に動かせます(7日分)。列をタップすると、上の絵がその時刻の海のようすに変わります。単位は、風・突風が m/s、波・うねりが m、間隔が秒、気温・水温が ℃、潮が cm です。風の矢印は風が吹いていく向きで、赤い矢印は出し風。潮の▲は満潮、▼は干潮の時刻です。</p>
+      <p class="seaextra">表は横に動かせます(7日分)。列をタップすると、上の絵がその時刻の海のようすに変わります。単位は、風・突風が m/s、波・うねりが m、間隔が秒、気温・水温が ℃です。風の矢印は風が吹いていく向きで、赤い矢印は出し風。潮の行は潮位の曲線で、山が満潮、谷が干潮です(時刻つき)。</p>
       <p class="why" id="seawhy"></p>
       <div class="gauges">
         <div class="gauge"><div class="gl"><span>風</span><span class="gv num" id="gwind"></span></div><div class="track" id="twind" style="--z1:41.7%;--z2:66.7%"><i id="mwind"></i></div></div>
@@ -919,14 +924,39 @@ function buildMeteo(){
       add("wh", x.wh.toFixed(1), x.wh > LIMITS.okWave ? "t-no" : x.wh > LIMITS.goWave ? "t-ok" : "");
       add("sh", x.sh.toFixed(1)); add("sp", x.sp.toFixed(1), x.swell ? "t-ok" : "");
       add("sst", x.sst != null ? x.sst.toFixed(1) : null);
-      var tdc = el("span", null, x.tide != null ? String(x.tide) : "—"), ev = "";
-      if (d.tide) { d.tide.hi.forEach(function(e){ var eh = hm(e[0]); if (eh >= h && eh < h + mgStep) ev = "▲" + hhmm(e[0]); }); d.tide.lo.forEach(function(e){ var eh = hm(e[0]); if (eh >= h && eh < h + mgStep) ev = "▼" + hhmm(e[0]); }); }
-      var box = el("span"); box.appendChild(tdc); box.appendChild(el("span", "ev", ev || "\u00a0")); add("td", box);
+      add("td", "");
     }
     var dh = el("td", "dayh"); dh.colSpan = n; var inn = el("span", "in"); inn.appendChild(document.createTextNode(L.md + "(" + L.w + ")" + (d.ts === viewToday ? " 今日" : "")));
     inn.appendChild(el("span", "pill " + d.verdict, VNAME[d.verdict])); inn.appendChild(el("span", "sh", d.shio)); dh.appendChild(inn); rows.day.appendChild(dh);
   });
   Array.prototype.forEach.call($("stepseg").children, function(b){ b.setAttribute("aria-pressed", String(+b.dataset.step === mgStep)); });
+  tideCurve(rows.td);
+}
+// 潮の行: 7日ぶんを1本の曲線で描き、山に満潮・谷に干潮の時刻を添える
+function tideCurve(tr){
+  var cells = tr.querySelectorAll("td"); if (!cells.length || !viewDays.some(function(d){ return d.tide; })) { Array.prototype.forEach.call(cells, function(c){ c.textContent = "—"; }); return; }
+  var fs = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--fs")) || 1, H = Math.round(62 * fs), pad = Math.round(17 * fs);
+  var x0 = cells[0].offsetLeft, cen = [], last = cells[cells.length - 1], total = last.offsetLeft + last.offsetWidth - x0;
+  Array.prototype.forEach.call(cells, function(c){ cen.push(c.offsetLeft - x0 + c.offsetWidth / 2); c.style.height = H + "px"; c.classList.remove("gone"); });
+  var X = function(tt){ var i = tt / mgStep, a = Math.max(0, Math.min(cen.length - 2, Math.floor(i))); return cen.length < 2 ? cen[0] : cen[a] + (i - a) * (cen[a + 1] - cen[a]); };
+  var lo = 1e9, hi = -1e9; viewDays.forEach(function(d){ if (d.tide) { d.tide.h.forEach(function(v){ lo = Math.min(lo, v); hi = Math.max(hi, v); }); d.tide.hi.concat(d.tide.lo).forEach(function(e){ lo = Math.min(lo, e[1]); hi = Math.max(hi, e[1]); }); } });
+  var Y = function(v){ return H - pad - (v - lo) / Math.max(1, hi - lo) * (H - pad * 2); };
+  var s = svg("svg", { "class":"tidecurve", width:total, height:H, viewBox:"0 0 " + total + " " + H, role:"img", "aria-label":"潮位の曲線" }), pts = [];
+  viewDays.forEach(function(d, di){ if (!d.tide) return; for (var h = 0; h < 24; h++) pts.push([X(di * 24 + h), Y(d.tide.h[h])]); });
+  if (pts.length < 2) return;
+  // なめらかな曲線(となり合う点の中間を通す)
+  var dstr = "M" + pts[0][0].toFixed(1) + " " + pts[0][1].toFixed(1);
+  for (var i = 1; i < pts.length - 1; i++) { var mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2; dstr += " Q" + pts[i][0].toFixed(1) + " " + pts[i][1].toFixed(1) + " " + mx.toFixed(1) + " " + my.toFixed(1); }
+  dstr += " L" + pts[pts.length - 1][0].toFixed(1) + " " + pts[pts.length - 1][1].toFixed(1);
+  s.appendChild(svg("path", { "class":"ta", d: dstr + " L" + pts[pts.length - 1][0].toFixed(1) + " " + H + " L" + pts[0][0].toFixed(1) + " " + H + " Z" }));
+  s.appendChild(svg("path", { "class":"tl", d: dstr }));
+  viewDays.forEach(function(d, di){ if (!d.tide) return;
+    [[d.tide.hi, "満", -1], [d.tide.lo, "干", 1]].forEach(function(g){ g[0].forEach(function(e){
+      var px = X(di * 24 + hm(e[0])), py = Y(e[1]); if (px < 0 || px > total) return;
+      s.appendChild(svg("circle", { cx:px.toFixed(1), cy:py.toFixed(1), r:(2.6 * fs).toFixed(1), "class": g[2] < 0 ? "th" : "tw" }));
+      var tx = svg("text", { x: Math.max(22 * fs, Math.min(total - 22 * fs, px)).toFixed(1), y: (g[2] < 0 ? py - 5 * fs : py + 13 * fs).toFixed(1), "text-anchor":"middle", "class":"tt", "font-size": (11 * fs).toFixed(1) });
+      tx.textContent = g[1] + hhmm(e[0]); s.appendChild(tx); }); }); });
+  cells[0].classList.add("tc0"); cells[0].appendChild(s);
 }
 function selCol(){ var h = Math.floor(sel.h / mgStep) * mgStep; for (var i = 0; i < mgCols.length; i++) if (mgCols[i].di === sel.di && mgCols[i].h === h) return i; return -1; }
 function markMeteo(scroll){
@@ -1097,7 +1127,7 @@ CKEYS.forEach(function(k){ $("c-" + k).addEventListener("change", function(){ va
 /* ---------- 文字の大きさ ---------- */
 function setSize(v){
   document.documentElement.style.setProperty("--fs", String(v)); save("shukko:fs", v);
-  setTimeout(function(){ var b = document.querySelector(".bar"); if (b) document.documentElement.style.setProperty("--barh", b.offsetHeight + "px"); }, 0);
+  setTimeout(function(){ var b = document.querySelector(".bar"); if (b) document.documentElement.style.setProperty("--barh", b.offsetHeight + "px"); if (typeof viewDays !== "undefined" && viewDays.length) drawSea(true); }, 0);
   Array.prototype.forEach.call($("sizes").children, function(b){ b.setAttribute("aria-pressed", String(+b.dataset.fs === +v)); });
 }
 Array.prototype.forEach.call($("sizes").children, function(b){ b.addEventListener("click", function(){ setSize(+b.dataset.fs); }); });
