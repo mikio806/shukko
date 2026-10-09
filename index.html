@@ -286,17 +286,17 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
     <p>出し風(陸から沖へ吹く風)の判定に使います。地点リストの値は目安なので、実際の浜の向きに合わせて直してください。</p>
     <h2>判定の基準</h2>
     <div class="setrow crit">
-      <label for="boat">船の種類</label>
-      <select id="boat"><option value="gomu">ゴムボート(2馬力)</option><option value="small">小型ボート(船外機つき)</option><option value="kayak">カヤック・SUP</option><option value="custom">自分で決める</option></select>
+      <label for="boat">釣り方・船の種類</label>
+      <select id="boat"><option value="gomu">ゴムボート(2馬力)</option><option value="small">小型ボート(船外機つき)</option><option value="kayak">カヤック・SUP</option><option value="iso">磯釣り(岸から)</option><option value="port">漁港・堤防(岸から)</option><option value="custom">自分で決める</option></select>
       <div class="critgrid">
-        <label for="c-goWind">出航可の風</label><span><input type="number" id="c-goWind" min="1" max="12" step="0.5" inputmode="decimal"> m/s以下</span>
-        <label for="c-goWave">出航可の波</label><span><input type="number" id="c-goWave" min="0.1" max="1.5" step="0.1" inputmode="decimal"> m以下</span>
+        <label for="c-goWind"><span class="gw">出航可</span>の風</label><span><input type="number" id="c-goWind" min="1" max="12" step="0.5" inputmode="decimal"> m/s以下</span>
+        <label for="c-goWave"><span class="gw">出航可</span>の波</label><span><input type="number" id="c-goWave" min="0.1" max="3" step="0.1" inputmode="decimal"> m以下</span>
         <label for="c-okWind">要注意の風</label><span><input type="number" id="c-okWind" min="1" max="15" step="0.5" inputmode="decimal"> m/s以下</span>
-        <label for="c-okWave">要注意の波</label><span><input type="number" id="c-okWave" min="0.1" max="2" step="0.1" inputmode="decimal"> m以下</span>
+        <label for="c-okWave">要注意の波</label><span><input type="number" id="c-okWave" min="0.1" max="4" step="0.1" inputmode="decimal"> m以下</span>
         <label for="c-gust">突風の上限</label><span><input type="number" id="c-gust" min="2" max="20" step="0.5" inputmode="decimal"> m/s</span>
       </div>
     </div>
-    <p>船の種類を選ぶと目安の数値が入ります。数値を直接変えると「自分で決める」になります。設定はこの端末だけに保存され、ほかの人の画面には影響しません。目安は一般的な値なので、自分の船と腕に合わせて控えめに決めてください。</p>
+    <p>釣り方や船の種類を選ぶと目安の数値が入ります。磯釣りと漁港・堤防は、岸から釣る人向けです。数値を直接変えると「自分で決める」になります。設定はこの端末だけに保存され、ほかの人の画面には影響しません。目安は一般的な値なので、自分の船と腕に合わせて控えめに決めてください。</p>
     <div class="legend">
       <span><i class="mark go"></i><span id="lg-go"></span></span>
       <span><i class="mark ok"></i><span id="lg-ok"></span></span>
@@ -306,14 +306,14 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
     <ul>
       <li>時間帯は、2時間以上つづく場合だけ表示します。</li>
       <li id="lg-gust"></li>
-      <li>出し風は風が弱くても沖へ流されます。岸を離れすぎないでください。</li>
+      <li id="lg-off"></li>
       <li>波の周期が4秒未満で波高0.4m以上のときは「波が細かい」と表示します。船が叩かれやすい状態です。</li>
       <li>天気・気温・降水確率・水温は、選んだ地点(海側)の予報です。日ごとの天気は日の出から日没までをまとめたものです。</li>
       <li>霧や見通し1km未満の時間は、風と波が基準内でも「要注意」に下げます。岸や他の船が見えなくなるためです。</li>
       <li>うねりが周期8秒以上・高さ0.3m以上のときは「うねり」と表示します。沖では穏やかでも、浜の波打ち際で急に立ち上がります。判定の「波」は、うねりと風波を合わせた高さです。</li>
       <li>青い線は潮位の動きで、色の帯と同じ時刻(4〜19時)に並んでいます。潮位は平均海面からの高さ(cm)の予測で、満潮・干潮の時刻は10〜20分ほどずれることがあります。</li>
     </ul>
-    <p>数値は Open-Meteo の予報(計算値)で、岬の陰や地形の影響までは反映されません。出航前に、最新の海上予報と現地の海面を必ず自分の目で確認してください。</p>
+    <p>数値は Open-Meteo の予報(計算値)で、岬の陰や地形の影響までは反映されません。出かける前に、最新の海上予報と現地の海面を必ず自分の目で確認してください。</p>
     <p id="meta"></p>
   </section>
 </main>
@@ -360,8 +360,9 @@ var PRESETS = [
 var DEFAULT_ID = "p:福井鮎川(国見)";
 
 /* ---------- 判定ロジック ---------- */
-var BOATS = { gomu:{ goWind:5, goWave:0.5, okWind:8, okWave:0.7, gust:8 }, small:{ goWind:7, goWave:0.8, okWind:10, okWave:1.0, gust:12 }, kayak:{ goWind:3, goWave:0.3, okWind:5, okWave:0.5, gust:6 } };
-var LIMITS = { goWind:5, goWave:0.5, okWind:8, okWave:0.7, gust:8, swellSec:8, swellM:0.3, offSpread:70, offMin:2 };
+var BOATS = { gomu:{ goWind:5, goWave:0.5, okWind:8, okWave:0.7, gust:8 }, small:{ goWind:7, goWave:0.8, okWind:10, okWave:1.0, gust:12 }, kayak:{ goWind:3, goWave:0.3, okWind:5, okWave:0.5, gust:6 },
+  iso:{ goWind:7, goWave:1.0, okWind:10, okWave:1.5, gust:13, shore:true }, port:{ goWind:7, goWave:1.5, okWind:10, okWave:2.0, gust:13, shore:true } };
+var LIMITS = { goWind:5, goWave:0.5, okWind:8, okWave:0.7, gust:8, swellSec:8, swellM:0.3, offSpread:70, offMin:2, shore:false };
 function fmtN(v){ return String(Math.round(v * 10) / 10); }
 var DIRS = ["北","北東","東","南東","南","南西","西","北西"];
 function dirName(deg){ return DIRS[Math.round((((deg % 360) + 360) % 360) / 45) % 8]; }
@@ -374,6 +375,7 @@ function judgeHour(ws, wh, wc, wg, fog){
 }
 // 出し風: 風が来る方角が、陸側(海の方角の反対)から±70度以内
 function isOffshore(dir, seaBearing, ws){
+  if (LIMITS.shore) return false;
   var diff = Math.abs(((dir - (seaBearing + 180)) % 360 + 540) % 360 - 180);
   return diff <= LIMITS.offSpread && ws >= LIMITS.offMin;
 }
@@ -428,7 +430,7 @@ function buildDays(f, seaBearing){
       var i = d*24 + h, ws = f.ws[i], wh = f.wh[i];
       hours.push({ h:h, ws:ws, wh:wh, wg:f.wg[i], wp:f.wp[i], wd:f.wd[i], dir:f.wdir[i], wc:f.wc[i],
         day: h >= Math.ceil(rise) && h <= Math.floor(set),
-        v: judgeHour(ws, wh, f.wc[i], f.wg[i], isFog(f, i)), fog: isFog(f, i),
+        v: shoreSwell(judgeHour(ws, wh, f.wc[i], f.wg[i], isFog(f, i)), f, i), fog: isFog(f, i),
         tp: f.tp ? f.tp[i] : null, pp: f.pp ? f.pp[i] : null, pr: f.pr ? f.pr[i] : null, sst: f.sst ? f.sst[i] : null,
         off: isOffshore(f.wdir[i], seaBearing, ws), gust: f.wg[i] > LIMITS.gust, thunder: f.wc[i] >= 95,
         chop: f.wp[i] < 4 && wh >= 0.4,
@@ -443,6 +445,8 @@ function buildDays(f, seaBearing){
   return days;
 }
 function span(r){ return r.from + ":00〜" + r.to + ":00"; }
+// 岸からの釣りでは、長い周期のうねりがある時間を「要注意」に下げる(磯や堤防で急に大波が上がるため)
+function shoreSwell(v, f, i){ return (LIMITS.shore && v === "go" && f.sp[i] >= LIMITS.swellSec && f.sh[i] >= LIMITS.swellM) ? "ok" : v; }
 function isFog(f, i){ return f.wc[i] === 45 || f.wc[i] === 48 || (f.vis && f.vis[i] != null && f.vis[i] < 1000); }
 /* ---------- 天気 ---------- */
 // 天気コード(WMO) → 呼び名と絵の種類
@@ -583,15 +587,15 @@ function render(){
   });
   var box = $("next"), pick = next || nextOk; box.hidden = false; box.textContent = "";
   box.className = "next " + (next ? "go" : nextOk ? "ok" : "no");
-  box.appendChild(el("div","label", next ? "次に出航できる時間帯" : nextOk ? "出航可の時間帯なし・要注意なら" : "この7日間"));
+  box.appendChild(el("div","label", next ? (LIMITS.shore ? "次に釣りができる時間帯" : "次に出航できる時間帯") : nextOk ? VNAME.go + "の時間帯なし・要注意なら" : "この7日間"));
   var big = el("div","big");
   if (pick) { var L0 = dateLabel(pick.d.ts); big.appendChild(el("span","num", L0.md)); big.appendChild(document.createTextNode("(" + L0.w + ") ")); big.appendChild(el("span","num", span(pick.r))); }
-  else big.textContent = "出航できる時間帯はありません";
+  else big.textContent = (LIMITS.shore ? "釣りができる" : "出航できる") + "時間帯はありません";
   box.appendChild(big);
   if (pick) { box.appendChild(wxLine(pick.d)); box.appendChild(facts(pick.d)); }
   var wk = days.filter(function(d){ var w = dateLabel(d.ts).dow; return w === 6 || w === 0; }).slice(0, 2);
   if (wk.length) box.appendChild(el("div","sub", "週末: " + wk.map(function(d){
-    return dateLabel(d.ts).w + "曜 " + (d.go.length ? "出航可 " + spans(d.go) : d.ok.length ? "要注意 " + spans(d.ok) : "中止"); }).join(" / ")));
+    return dateLabel(d.ts).w + "曜 " + (d.go.length ? VNAME.go + " " + spans(d.go) : d.ok.length ? "要注意 " + spans(d.ok) : "中止"); }).join(" / ")));
 
   var key = place.id + "|" + f.t0 + "|" + today;
   viewDays = days; viewToday = today; viewNowH = nowH;
@@ -612,7 +616,7 @@ function render(){
     var date = el("span","date num", L.md); date.appendChild(el("small", null, "(" + L.w + ")" + (isToday ? " 今日" : ""))); head.appendChild(date);
     head.appendChild(el("span","pill " + d.verdict, VNAME[d.verdict]));
     var win = el("span","win");
-    if (d.verdict === "go") win.appendChild(el("span","num", spans(d.go))); else if (d.verdict === "ok") win.appendChild(el("span","num", spans(d.ok))); else win.textContent = "出せる時間帯なし";
+    if (d.verdict === "go") win.appendChild(el("span","num", spans(d.go))); else if (d.verdict === "ok") win.appendChild(el("span","num", spans(d.ok))); else win.textContent = LIMITS.shore ? "できる時間帯なし" : "出せる時間帯なし";
     head.appendChild(win);
     var op = el("span","open"); op.appendChild(el("span","a","1時間ごとを見る")); op.appendChild(el("span","b","閉じる")); head.appendChild(op);
     sum.appendChild(head);
@@ -701,12 +705,13 @@ var cv = $("seacanvas"), cx = cv.getContext("2d"), cur = null, tgt = null, raf =
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 function windAlong(dir, b){ var d = ((dir - (b + 180)) % 360 + 540) % 360 - 180; return Math.cos(d * Math.PI / 180); }
 function whyText(x){
-  if (!x.day) return "日の出前・日没後なので、出航しない時間です。";
+  if (!x.day) return LIMITS.shore ? "日の出前・日没後は判定していません。" : "日の出前・日没後なので、出航しない時間です。";
   var a = [];
   if (x.thunder) a.push("雷の予報");
   if (x.ws > LIMITS.okWind) a.push("風が" + fmtN(LIMITS.okWind) + "m/s超"); else if (x.ws > LIMITS.goWind) a.push("風が" + fmtN(LIMITS.goWind) + "m/s超");
   if (x.wh > LIMITS.okWave) a.push("波が" + fmtN(LIMITS.okWave) + "m超"); else if (x.wh > LIMITS.goWave) a.push("波が" + fmtN(LIMITS.goWave) + "m超");
   if (x.gust) a.push("突風が" + fmtN(LIMITS.gust) + "m/s超");
+  if (LIMITS.shore && x.swell) a.push("周期の長いうねり");
   if (x.fog) a.push("霧(見通し不良)");
   return a.length ? a.join("、") + "のため" + VNAME[x.v] + "です。" : "風も波も基準内です。";
 }
@@ -734,7 +739,7 @@ function drawSea(rebuild){
   var nt = svg("text", { x:20, y:9, "text-anchor":"middle", "class":"n" }); nt.textContent = "北"; ds.appendChild(nt);
   var dg = svg("g", { transform:"rotate(" + ((x.dir + 180) % 360) + " 20 20)" }); dg.appendChild(svg("path", { d:"M20 9 L27 22 H22.5 V32 H17.5 V22 H13 Z", "class":"ar" })); ds.appendChild(dg);
   dl.appendChild(ds); dl.appendChild(el("span", null, x.ws < 1 ? "無風" : dirName(x.dir) + "の風"));
-  if (rebuild) { buildMeteo(); $("nextbtn").textContent = "次の出航可へ"; }
+  if (rebuild) { buildMeteo(); $("nextbtn").textContent = "次の" + VNAME.go + "へ"; }
   markMeteo(rebuild);
   var dayness = clamp((sel.h - (rise - 0.7)) / 1.2, 0, 1) * clamp(((set + 0.7) - sel.h) / 1.2, 0, 1);
   var tl = 999, th = -999; viewDays.forEach(function(q){ if (q.tide) q.tide.h.forEach(function(v){ tl = Math.min(tl, v); th = Math.max(th, v); }); });
@@ -743,7 +748,7 @@ function drawSea(rebuild){
     d: dayness, warm: Math.max(0, 1 - Math.min(Math.abs(sel.h - rise), Math.abs(sel.h - set)) / 1.3), sunT: clamp((sel.h - rise) / (set - rise), -0.1, 1.1),
     cloud: x.wc >= 3 ? 1 : x.wc === 2 ? 0.6 : x.wc === 1 ? 0.25 : 0, rain: (wxInfo(x.wc).k === "rain" || x.wc >= 95) ? 1 : 0, thunder: x.wc >= 95 ? 1 : 0,
     fog: x.fog ? 1 : 0, snow: wxInfo(x.wc).k === "snow" ? 1 : 0,
-    launch: (x.day && x.v !== "no") ? 1 : 0 };
+    launch: (!LIMITS.shore && x.day && x.v !== "no") ? 1 : 0, shore: LIMITS.shore ? 1 : 0, land: !LIMITS.shore ? 0 : ($("boat").value === "port" ? 2 : 1), angl: (LIMITS.shore && x.day && x.v !== "no") ? 1 : 0 };
   if (!cur || RM) cur = Object.assign({}, tgt);
   kick();
 }
@@ -797,6 +802,35 @@ function drawBoat(bx, by, ang, s, dim, ashore){
   rr(11, -17.5, 12, 6.5, 1.2, WH); rr(11, -14.8, 12, 1.3, 0, R);
   cx.restore();
 }
+// 岸から釣る人(磯・堤防): ショアジギング。振りかぶって投げ、着水後は竿をしゃくりながら巻いてくる(約8秒でひと回り)
+// wl=水面の高さ、reach=投げる距離(どちらも人の足元を原点にした大きさ)
+function drawAngler(x, y, s, dim, wl, reach){
+  var T = 8, u = RM ? 4 : (clock % T), ang, lure = null, splash = 0, enter = null, DK = "#22313A";
+  var hx = 3.5, hy = -18, L = 30, far = reach, near = 16;
+  if (u < 0.7) { ang = 40 + 95 * (u / 0.7); }                                             // 振りかぶる
+  else if (u < 0.95) { ang = 135 - 105 * ((u - 0.7) / 0.25); }                            // 振り抜く
+  else if (u < 1.9) { ang = 30 + 8 * ((u - 0.95) / 0.95); }                               // ジグが飛ぶ
+  else { var k = (u - 1.9) / (T - 1.9), j = (u - 1.9) * 1.6 % 1; ang = 38 + (j < 0.28 ? 30 * Math.sin(j / 0.28 * Math.PI) : 0); enter = far - (far - near) * k; }   // しゃくって巻く
+  var a = ang * Math.PI / 180, tx = hx + L * Math.cos(a), ty = hy - L * Math.sin(a);
+  if (u < 0.95) lure = [tx - 2, ty + 7];
+  else if (u < 1.9) { var q = (u - 0.95) / 0.95; lure = [tx + (far - tx) * q, ty + (wl - ty) * q - 26 * Math.sin(Math.PI * q)]; }
+  if (u >= 1.9 && u < 2.5) splash = (u - 1.9) / 0.6;
+  cx.save(); cx.translate(x, y); cx.scale(s * 1.3, s * 1.3); cx.globalAlpha = dim; cx.lineCap = "round";
+  cx.fillStyle = DK; cx.fillRect(-3.4, -11, 2.6, 11); cx.fillRect(0.4, -11, 2.6, 11);                   // 脚
+  cx.fillStyle = "#F08A24"; cx.fillRect(-4.2, -22, 8, 12);                                              // 胴(ライフジャケット)
+  cx.fillStyle = "#E9C9A6"; cx.beginPath(); cx.arc(-0.2, -25.6, 3.4, 0, 7); cx.fill();
+  cx.fillStyle = DK; cx.fillRect(-4, -29.6, 7.6, 2.2);                                                  // 帽子
+  cx.strokeStyle = "#F08A24"; cx.lineWidth = 2.2; cx.beginPath(); cx.moveTo(1.5, -20); cx.lineTo(hx, hy); cx.stroke();   // 腕
+  cx.strokeStyle = DK; cx.lineWidth = 1.1; cx.beginPath(); cx.moveTo(hx - 3 * Math.cos(a), hy + 3 * Math.sin(a)); cx.lineTo(hx + L * 0.45 * Math.cos(a), hy - L * 0.45 * Math.sin(a)); cx.stroke();
+  cx.lineWidth = 0.7; cx.beginPath(); cx.moveTo(hx + L * 0.45 * Math.cos(a), hy - L * 0.45 * Math.sin(a)); cx.lineTo(tx, ty); cx.stroke();
+  cx.lineWidth = 0.35; cx.strokeStyle = "rgba(240,244,246,.9)"; cx.beginPath(); cx.moveTo(tx, ty);                                  // 糸
+  if (lure) cx.lineTo(lure[0], lure[1]); else cx.quadraticCurveTo((tx + enter) / 2, (ty + wl) / 2 + 5, enter, wl);
+  cx.stroke();
+  if (lure) { cx.fillStyle = "#E8EEF2"; cx.beginPath(); cx.ellipse(lure[0], lure[1], 2.4, 1, 0.5, 0, 7); cx.fill(); }               // ジグ
+  if (splash > 0) { cx.strokeStyle = "rgba(255,255,255," + (0.9 * (1 - splash)) + ")"; cx.lineWidth = 0.8; cx.beginPath(); cx.ellipse(far, wl, 3 + 9 * splash, 1 + 2.5 * splash, 0, 0, 7); cx.stroke(); }
+  else if (enter != null) { cx.strokeStyle = "rgba(255,255,255,.6)"; cx.lineWidth = 0.6; cx.beginPath(); cx.ellipse(enter, wl, 2.2, 0.7, 0, 0, 7); cx.stroke(); }
+  cx.restore();
+}
 function paint(){
   var sz = sizeCanvas(), W = sz.W, H = sz.H, p = cur, hor = H * 0.58 - (p.tide - 0.5) * 10, i;
   // 空
@@ -822,11 +856,23 @@ function paint(){
   waveLayer(W, H, hor, 1.3, p.A * 0.6, rgb(c1)); waveLayer(W, H, hor + 14, 0, p.A, rgb(c2));
   var sc = clamp(W / 360, 0.9, 1.5), seaX = W * 0.62, shoreX = W * 0.21, yb = hor + 14 + wy(seaX, 0, p.A), slope = (wy(seaX + 6, 0, p.A) - wy(seaX - 6, 0, p.A)) / 12;
   var bx = shoreX + (seaX - shoreX) * p.launch, by = (hor - 14) + (yb + 6.5 - (hor - 14)) * p.launch, ba = clamp(Math.atan(slope), -0.3, 0.3) * p.launch + (1 - p.launch) * 0.06;
-  if (p.launch > 0.5) drawBoat(bx, by, ba, sc, 1, false);
+  if (p.launch > 0.5 && p.shore < 0.5) drawBoat(bx, by, ba, sc, 1, false);
   waveLayer(W, H, hor + 36, 2.4, p.A * 0.8, rgb(c3));
-  // 岸
-  cx.fillStyle = rgb(mix([224,204,160], [58,62,60], night * 0.8)); cx.beginPath(); cx.moveTo(0, hor - 18); cx.lineTo(W * 0.15, hor - 15); cx.quadraticCurveTo(W * 0.24, hor - 6, W * 0.3, hor + 30); cx.lineTo(W * 0.34, H); cx.lineTo(0, H); cx.closePath(); cx.fill();
-  if (p.launch <= 0.5) drawBoat(bx, by - 6 * sc, ba, sc, 0.55 + 0.45 * p.d, true);
+  // 岸: 船のときは浜、磯釣りは岩場、漁港は堤防
+  var landK = Math.round(p.land || 0);
+  if (landK === 2) {
+    cx.fillStyle = rgb(mix([186,190,190], [70,76,78], night * 0.8)); cx.beginPath(); cx.moveTo(0, hor - 17); cx.lineTo(W * 0.27, hor - 17); cx.lineTo(W * 0.27, hor + 6); cx.lineTo(W * 0.3, hor + 6); cx.lineTo(W * 0.32, H); cx.lineTo(0, H); cx.closePath(); cx.fill();
+    cx.fillStyle = rgb(mix([150,156,158], [52,58,60], night * 0.8)); cx.fillRect(0, hor - 17, W * 0.27, 3);
+    cx.fillStyle = rgb(mix([132,138,140], [46,52,54], night * 0.8)); [0.285, 0.31, 0.3].forEach(function(fx, n){ cx.beginPath(); cx.arc(W * fx, hor + 12 + n * 9, 7, 0, 7); cx.fill(); });   // 消波ブロック
+  } else if (landK === 1) {
+    cx.fillStyle = rgb(mix([104,96,90], [44,44,44], night * 0.8)); cx.beginPath(); cx.moveTo(0, hor - 26); cx.lineTo(W * 0.06, hor - 20); cx.lineTo(W * 0.11, hor - 24); cx.lineTo(W * 0.16, hor - 15); cx.lineTo(W * 0.22, hor - 15); cx.lineTo(W * 0.25, hor - 4); cx.lineTo(W * 0.29, hor + 2); cx.lineTo(W * 0.31, hor + 22); cx.lineTo(W * 0.35, H); cx.lineTo(0, H); cx.closePath(); cx.fill();
+    cx.fillStyle = rgb(mix([84,78,74], [34,34,36], night * 0.8)); cx.beginPath(); cx.moveTo(W * 0.37, hor + 16); cx.lineTo(W * 0.4, hor + 4); cx.lineTo(W * 0.44, hor + 10); cx.lineTo(W * 0.46, hor + 26); cx.lineTo(W * 0.36, hor + 30); cx.closePath(); cx.fill();   // 沖の岩
+    if (p.A > 9 && !RM) { var sp = Math.max(0, Math.sin(phase + 1)); cx.fillStyle = "rgba(255,255,255," + 0.5 * sp + ")"; cx.beginPath(); cx.ellipse(W * 0.3, hor + 2 - sp * p.A * 0.5, 9, 4 + sp * p.A * 0.35, 0, 0, 7); cx.fill(); }   // 波しぶき
+  } else {
+    cx.fillStyle = rgb(mix([224,204,160], [58,62,60], night * 0.8)); cx.beginPath(); cx.moveTo(0, hor - 18); cx.lineTo(W * 0.15, hor - 15); cx.quadraticCurveTo(W * 0.24, hor - 6, W * 0.3, hor + 30); cx.lineTo(W * 0.34, H); cx.lineTo(0, H); cx.closePath(); cx.fill();
+  }
+  if (p.launch <= 0.5 && p.shore < 0.5) drawBoat(bx, by - 6 * sc, ba, sc, 0.55 + 0.45 * p.d, true);
+  if (p.shore >= 0.5 && p.angl > 0.05) { var ax = W * (landK === 2 ? 0.22 : 0.19), ay = hor - (landK === 2 ? 17 : 15), k13 = sc * 1.3; drawAngler(ax, ay, sc, clamp(p.angl, 0, 1) * (0.6 + 0.4 * p.d), (hor + 16 - ay) / k13, (W * 0.8 - ax) / k13); }
   // 吹き流し
   var px = W * 0.05, py = hor - 18, ph = 44, dirS = p.sign >= 0 ? 1 : -1, droop = (80 - 75 * clamp(p.ws / 8, 0, 1)) * Math.PI / 180 + Math.sin(clock * 6) * 0.07 * clamp(p.ws / 3, 0, 1), L = 14 + clamp(p.ws, 0, 12) * 1.8;
   cx.strokeStyle = rgb(mix([70,80,86], [150,160,166], night)); cx.lineWidth = 2; cx.beginPath(); cx.moveTo(px, py); cx.lineTo(px, py - ph); cx.stroke();
@@ -901,7 +947,7 @@ $("nextbtn").addEventListener("click", function(){
   stopPlay();
   for (var i = 0; i < viewDays.length; i++) { var d = viewDays[i];
     for (var j = 0; j < d.go.length; j++) { var r = d.go[j]; if (d.ts !== viewToday || r.to > viewNowH) { sel = { di:i, h: d.ts === viewToday ? Math.max(r.from, Math.min(viewNowH, r.to)) : r.from }; drawSea(true); return; } } }
-  this.textContent = "出航可の時間なし";
+  this.textContent = VNAME.go + "の時間なし";
 });
 function stopPlay(){ if (playTimer) { clearInterval(playTimer); playTimer = null; } $("playbtn").textContent = "再生"; }
 $("playbtn").addEventListener("click", function(){
@@ -1029,9 +1075,14 @@ function applyCrit(boat, vals, redraw){
   if (LIMITS.okWind < LIMITS.goWind) LIMITS.okWind = LIMITS.goWind;
   if (LIMITS.okWave < LIMITS.goWave) LIMITS.okWave = LIMITS.goWave;
   var cur = {}; CKEYS.forEach(function(k){ cur[k] = LIMITS[k]; $("c-" + k).value = fmtN(LIMITS[k]); });
-  $("boat").value = boat; save("shukko:crit", { boat:boat, v:cur });
-  $("lg-go").textContent = "出航可 風" + fmtN(LIMITS.goWind) + "m/s以下・波" + fmtN(LIMITS.goWave) + "m以下";
-  $("lg-ok").textContent = "要注意 風" + fmtN(LIMITS.okWind) + "m/s以下・波" + fmtN(LIMITS.okWave) + "m以下(短時間・岸寄りのみ)";
+  LIMITS.shore = boat === "custom" ? (vals.shore != null ? !!vals.shore : !!LIMITS.shore) : !!(BOATS[boat] && BOATS[boat].shore);
+  VNAME.go = LIMITS.shore ? "釣り可" : "出航可";
+  $("boat").value = boat; save("shukko:crit", { boat:boat, v:cur, shore:LIMITS.shore });
+  Array.prototype.forEach.call(document.querySelectorAll(".gw"), function(e){ e.textContent = VNAME.go; });
+  $("nextbtn").textContent = "次の" + VNAME.go + "へ";
+  $("lg-off").textContent = LIMITS.shore ? "岸からの釣りでは、出し風(陸から沖への風)の警告は出しません。代わりに、周期8秒以上・高さ0.3m以上のうねりがある時間は「要注意」に下げます。磯や堤防では、静かに見えても急に大きな波が上がるためです。" : "出し風は風が弱くても沖へ流されます。岸を離れすぎないでください。";
+  $("lg-go").textContent = VNAME.go + " 風" + fmtN(LIMITS.goWind) + "m/s以下・波" + fmtN(LIMITS.goWave) + "m以下";
+  $("lg-ok").textContent = "要注意 風" + fmtN(LIMITS.okWind) + "m/s以下・波" + fmtN(LIMITS.okWave) + "m以下" + (LIMITS.shore ? "(足場の高い所で短時間のみ)" : "(短時間・岸寄りのみ)");
   $("lg-gust").textContent = "突風が" + fmtN(LIMITS.gust) + "m/sを超える時間は、風と波が基準内でも「要注意」に下げます。";
   var pc = function(a, b){ return (clamp(a / b, 0, 1) * 100).toFixed(1) + "%"; };
   $("twind").style.cssText = "--z1:" + pc(LIMITS.goWind, LIMITS.okWind * 1.5) + ";--z2:" + pc(LIMITS.okWind, LIMITS.okWind * 1.5);
@@ -1041,7 +1092,7 @@ function applyCrit(boat, vals, redraw){
 }
 $("boat").addEventListener("change", function(){ var b = this.value; applyCrit(b, BOATS[b] || LIMITS, true); });
 CKEYS.forEach(function(k){ $("c-" + k).addEventListener("change", function(){ var v = {}; CKEYS.forEach(function(q){ v[q] = $("c-" + q).value; }); applyCrit("custom", v, true); }); });
-(function(){ var s = load("shukko:crit", null); if (s && s.v && (BOATS[s.boat] || s.boat === "custom")) applyCrit(s.boat, s.boat === "custom" ? s.v : BOATS[s.boat], false); else applyCrit("gomu", BOATS.gomu, false); })();
+(function(){ var s = load("shukko:crit", null); if (s && s.v && (BOATS[s.boat] || s.boat === "custom")) applyCrit(s.boat, s.boat === "custom" ? Object.assign({ shore: !!s.shore }, s.v) : BOATS[s.boat], false); else applyCrit("gomu", BOATS.gomu, false); })();
 
 /* ---------- 文字の大きさ ---------- */
 function setSize(v){
