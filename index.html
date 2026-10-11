@@ -18,7 +18,7 @@
 :root{
   --bg:#EDF2F1; --surface:#FFFFFF; --ink:#0F2730; --muted:#5B6F75; --line:#D3DEDD;
   --go:#17865A; --go-soft:#D5EFE2; --ok:#B77A00; --ok-soft:#F8E7BD; --no:#BF3B2A; --no-soft:#F4D6D0;
-  --night:#DCE4E3; --accent:#0B5F78; --tide:#1F6FA8; --tide-soft:#D3E5F2; --star:#D39A00; --fs:1.25;
+  --night:#DCE4E3; --accent:#0B5F78; --tide:#1F6FA8; --tide-soft:#D3E5F2; --star:#D39A00; --land:#D9C39A; --fs:1.25;
   --jp:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Yu Gothic",Meiryo,sans-serif;
   --num:"Avenir Next Condensed","DIN Alternate","Helvetica Neue","Arial Narrow",var(--jp);
 }
@@ -105,6 +105,7 @@ table.mg{border-collapse:separate;border-spacing:0;width:auto;font-size:calc(13p
 .mg td.sel.t-ok{background:var(--ok-soft)} .mg td.sel.t-no{background:var(--no-soft)}
 .mg .arr{width:calc(20px*var(--fs));height:calc(20px*var(--fs));display:block;margin:0 auto;fill:var(--accent)} .mg .arr.off{fill:var(--no)}
 .mg .wx{margin:0 auto;display:block}
+.mg .gu{display:block;font-size:calc(12px*var(--fs));color:var(--muted);line-height:1.15;font-weight:500} .mg .gu.over{color:var(--no);font-weight:700}
 .mg .r-td td{padding:0}
 .mg .r-td td.tc0{position:relative;z-index:1;overflow:visible}
 .mg .tidecurve{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;max-width:none}
@@ -145,6 +146,38 @@ table.mg{border-collapse:separate;border-spacing:0;width:auto;font-size:calc(13p
 details.day[open] .tablebox{animation:fadein .25s ease-out}
 @media (prefers-reduced-motion: reduce){ .sheet,.icon.on svg,details.day[open] .tablebox{animation:none} .track i{transition:none} }
 
+.more{padding:2px 14px 12px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line)}
+.morelabel{margin:8px 0 0;font-size:calc(11px*var(--fs));font-weight:700;color:var(--muted)}
+.more .ticks{margin-top:-4px}
+.gu2{font-size:calc(13px*var(--fs));color:var(--muted)} .gu2.over{color:var(--no)}
+details.day[open] .more{animation:fadein .25s ease-out}
+.tcap{margin:10px 0 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:calc(14px*var(--fs))}
+.tcap .shio{color:var(--tide);font-size:calc(16px*var(--fs))}
+.moon{width:calc(22px*var(--fs));height:calc(22px*var(--fs));flex:none} .moon .md{fill:#27343B} .moon .ml{fill:#F3E7B5} .moon .mo{fill:none;stroke:var(--muted);stroke-width:1}
+.tday{display:block;width:100%;height:auto;max-width:560px}
+.tday .bm{fill:#5E7FA8} .tday .bs{fill:#E08A2C} .tday .bt{fill:#fff;font-size:8.5px;font-weight:700;font-family:var(--num)}
+.tday .nw{stroke:var(--no);stroke-width:1;stroke-dasharray:3 3} .tday .nwd{fill:var(--no);stroke:var(--surface);stroke-width:1.5}
+.tday .mk{stroke:var(--ink);stroke-width:1.5} .tday .mkd{fill:var(--ink);stroke:var(--surface);stroke-width:2}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+.card2{border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-width:0;background:var(--bg)}
+.card2 h3{margin:0 0 6px;font-size:calc(12px*var(--fs));color:var(--muted);letter-spacing:.06em}
+.card2 .tcap{margin:0 0 4px} .tcap .bun{color:var(--tide);font-size:calc(16px*var(--fs))}
+.cmp{display:flex;align-items:center;gap:10px}
+.compass{width:calc(132px*var(--fs));max-width:46vw;height:auto;flex:none;display:block}
+.compass .csea{fill:var(--tide-soft)} .compass .cland{fill:var(--land)} .compass .cring{fill:none;stroke:var(--line);stroke-width:1.5}
+.compass .cn{fill:var(--muted);font-size:11px;font-weight:700;font-family:var(--jp)} .compass .cl.cs{fill:var(--ink)} .compass .cl{fill:#3D4A50;font-size:10px;font-weight:700;font-family:var(--jp);opacity:.75}
+.compass .awd path{fill:var(--accent);stroke:var(--surface);stroke-width:1} .compass .awd.off path{fill:var(--no)} .compass .asw path{fill:#E08A2C;stroke:var(--surface);stroke-width:1}
+.cmptx{min-width:0;font-size:calc(13px*var(--fs));line-height:1.45} .cmptx p{margin:0 0 3px} .cmptx b{margin-right:6px;font-size:calc(11px*var(--fs));color:var(--muted)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px} .dot.awd{background:var(--accent)} .dot.awd.off{background:var(--no)} .dot.asw{background:#E08A2C} .dot.none{background:transparent}
+.tday .tn{fill:var(--night);opacity:.75} .tday .tg{stroke:var(--line);stroke-width:1} .tday .tx{fill:var(--muted);font-size:10px;font-family:var(--num)}
+.tday .ta{fill:var(--tide);opacity:.14} .tday .tl{fill:none;stroke:var(--tide);stroke-width:1.6} .tday .tf{fill:none;stroke:var(--tide);stroke-width:4.5;stroke-linecap:round}
+.tday .th{fill:var(--tide)} .tday .tw{fill:var(--surface);stroke:var(--tide);stroke-width:1.6} .tday .tt{fill:var(--ink);font-size:11px;font-weight:700;font-family:var(--jp)}
+.shiowk{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 6px 8px}
+.shiowk .sc{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;font-size:calc(11px*var(--fs));line-height:1.2}
+.shiowk .sc.now .sd{font-weight:800;text-decoration:underline}
+.shiowk .sv{font-size:calc(12px*var(--fs));font-weight:600}
+.shiowk .sb{width:60%;height:64px;display:flex;align-items:flex-end;background:var(--bg);border-radius:3px} .shiowk .sb i{display:block;width:100%;background:var(--tide);border-radius:3px}
+.shiowk .sn{font-weight:800;color:var(--tide);white-space:nowrap} .shiowk .sd{font-size:calc(12px*var(--fs))} .shiowk .sw{color:var(--muted)}
 .days{display:flex;flex-direction:column;gap:8px}
 details.day{background:var(--surface);border:1px solid var(--line);border-radius:6px}
 details.day.wkend{border-color:var(--accent)}
@@ -198,6 +231,7 @@ tr.night td{color:var(--muted)}
 .sec .tablebox{border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:2px 10px 8px}
 .sec td,.sec th{text-align:left}
 .sec td{white-space:pre-line;vertical-align:top}
+.sec td:nth-child(2),.sec th:nth-child(2){white-space:nowrap}
 .sec td.num{font-size:calc(14px*var(--fs))}
 .rules{font-size:calc(13px*var(--fs));color:var(--muted);display:flex;flex-direction:column;gap:10px}
 .rules h2{color:var(--ink);margin:0}
@@ -262,7 +296,11 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
         <button class="playbtn" id="playbtn" type="button">再生</button>
       </div>
       <div class="mgwrap" id="mgwrap"><table class="mg" id="mg"></table></div>
-      <p class="seaextra">表は横に動かせます(7日分)。列をタップすると、上の絵がその時刻の海のようすに変わります。単位は、風・突風が m/s、波・うねりが m、間隔が秒、気温・水温が ℃です。風の矢印は風が吹いていく向きで、赤い矢印は出し風。潮の行は潮位の曲線で、山が満潮、谷が干潮です(時刻つき)。</p>
+      <p class="seaextra">表は横に動かせます(7日分)。列をタップすると、上の絵がその時刻の海のようすに変わります。風の下のカッコは最大瞬間風速(突風)です。単位は、風・突風が m/s、波・うねりが m、間隔が秒、気温・水温が ℃です。風の矢印は風が吹いていく向きで、赤い矢印は出し風。潮の行は潮位の曲線で、山が満潮、谷が干潮です(時刻つき)。</p>
+      <div class="pair">
+        <div class="card2"><h3>風とうねりの向き</h3><div class="cmp"><span id="compass"></span><div class="cmptx" id="cmptx"></div></div></div>
+        <div class="card2"><h3>潮</h3><p class="tcap" id="tnow"></p><div id="tnowchart"></div></div>
+      </div>
       <p class="why" id="seawhy"></p>
       <div class="gauges">
         <div class="gauge"><div class="gl"><span>風</span><span class="gv num" id="gwind"></span></div><div class="track" id="twind" style="--z1:41.7%;--z2:66.7%"><i id="mwind"></i></div></div>
@@ -275,9 +313,12 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
   </section>
   <section id="next" class="next" hidden></section>
   <div id="empty" class="empty">予報を読み込んでいます。</div>
-  <p class="extra" id="dayshint" hidden>日ごとのまとめです。色の帯の時刻や、1時間ごとの表の行をタップすると、その時刻の海のようすを上に表示します。</p>
+  <p class="extra" id="dayshint" hidden>日ごとのまとめです。日付をタップすると、潮・日の出入り・1時間ごとの表が開きます。色の帯の時刻をタップすると、その時刻の海のようすを上に表示します。</p>
   <section id="days" class="days"></section>
   <section class="sec" id="tidesec" hidden>
+    <h2>潮回り(7日間の干満差)</h2>
+    <div class="shiowk" id="shiowk"></div>
+    <p class="seaextra">棒の高さが、その日の満潮と干潮の差です。潮名(大潮・中潮・小潮・長潮・若潮)は月の満ち欠けから決まりますが、日本海側は干満差が小さく、潮名どおりに差が大きくなるとは限りません。実際の動きは棒の高さで見てください。</p>
     <h2>潮時表</h2>
     <div class="tablebox"><table id="tidetable"></table></div>
   </section>
@@ -397,7 +438,7 @@ function runs(hours, test){
 function tideFromSeaLevel(sl, nDays){
   if (!sl || sl.some(function(v){ return v == null; })) return null;
   var days = [], d, i;
-  for (d = 0; d < nDays; d++) days.push({ h: sl.slice(d*24, d*24+24).map(function(v){ return Math.round(v*100); }), hi:[], lo:[] });
+  for (d = 0; d < nDays; d++) days.push({ h: sl.slice(d*24, d*24+24).map(function(v){ return Math.round(v*100); }), hf: sl.slice(d*24, d*24+24).map(function(v){ return Math.round(v*1000) / 10; }), hi:[], lo:[] });
   for (i = 1; i < sl.length - 1; i++) {
     var a = sl[i-1], b = sl[i], c = sl[i+1];
     var isHi = b > a && b >= c, isLo = b < a && b <= c;
@@ -412,13 +453,16 @@ function tideFromSeaLevel(sl, nDays){
   return days;
 }
 // 潮名(月と太陽の黄経差から。気象庁と同じ区分)
-function shioName(ts){
+function moonElong(ts){
   var d = (ts - Date.UTC(2000,0,1,12)) / 86400000, R = Math.PI / 180;
   var g = (357.528 + 0.9856003*d) * R;
   var sun = 280.460 + 0.9856474*d + 1.915*Math.sin(g) + 0.020*Math.sin(2*g);
   var M = (134.963 + 13.064993*d) * R, D = (297.850 + 12.190749*d) * R, F = (93.272 + 13.229350*d) * R;
   var moon = 218.316 + 13.176396*d + 6.289*Math.sin(M) - 1.274*Math.sin(M - 2*D) + 0.658*Math.sin(2*D) - 0.186*Math.sin(g) - 0.114*Math.sin(2*F);
-  var x = ((((moon - sun) % 360) + 360) % 360) % 180;
+  return (((moon - sun) % 360) + 360) % 360;
+}
+function shioName(ts){
+  var x = moonElong(ts) % 180;
   if (x < 36 || x >= 168) return "大潮";
   if (x < 72) return "中潮";
   if (x < 108) return "小潮";
@@ -559,6 +603,86 @@ function wxLine(d){
   return p;
 }
 function svg(tag, attrs){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); return e; }
+// 月の高度(度)。月の出・月の入りの計算に使う(誤差は数分)
+function moonAlt(ts, lat, lon){
+  var d = (ts - Date.UTC(2000,0,1,12)) / 86400000, R = Math.PI / 180;
+  var g = (357.528 + 0.9856003*d) * R, M = (134.963 + 13.064993*d) * R, D = (297.850 + 12.190749*d) * R, F = (93.272 + 13.229350*d) * R;
+  var lam = (218.316 + 13.176396*d + 6.289*Math.sin(M) - 1.274*Math.sin(M - 2*D) + 0.658*Math.sin(2*D) - 0.186*Math.sin(g) - 0.114*Math.sin(2*F) + 0.214*Math.sin(2*M)) * R;
+  var bet = (5.128*Math.sin(F) + 0.280*Math.sin(M + F) + 0.277*Math.sin(M - F) + 0.173*Math.sin(2*D - F)) * R, ep = 23.439 * R;
+  var ra = Math.atan2(Math.sin(lam)*Math.cos(ep) - Math.tan(bet)*Math.sin(ep), Math.cos(lam)), dec = Math.asin(Math.sin(bet)*Math.cos(ep) + Math.cos(bet)*Math.sin(ep)*Math.sin(lam));
+  var ha = (280.46061837 + 360.98564736629*d + lon) * R - ra, ph = lat * R;
+  return Math.asin(Math.sin(ph)*Math.sin(dec) + Math.cos(ph)*Math.cos(dec)*Math.cos(ha)) / R;
+}
+// その日(日本時間0〜24時)の月の出・月の入り。{rise, set} は時刻(時の小数)、無ければ null
+function moonTimes(dayTs, lat, lon){
+  var out = { rise:null, set:null }, h0 = 0.125, prev = moonAlt(dayTs, lat, lon) - h0;
+  for (var m = 5; m <= 1440; m += 5) { var cur = moonAlt(dayTs + m * 60000, lat, lon) - h0;
+    if (prev < 0 && cur >= 0 && out.rise == null) out.rise = (m - 5 + 5 * (-prev) / (cur - prev)) / 60;
+    if (prev >= 0 && cur < 0 && out.set == null) out.set = (m - 5 + 5 * prev / (prev - cur)) / 60;
+    prev = cur; }
+  return out;
+}
+function hmText(h){ var m = Math.round(h * 60); return Math.floor(m / 60) + ":" + ("0" + (m % 60)).slice(-2); }
+// 時刻 hour(小数可)の潮位(cm)
+function tideAt(days, di, hour){
+  var d = days[di]; if (!d || !d.tide) return null;
+  var v = d.tide.hf || d.tide.h, a = Math.floor(hour), b = a + 1, va = v[Math.min(23, a)], vb = b <= 23 ? v[b] : (days[di + 1] && days[di + 1].tide ? (days[di + 1].tide.hf || days[di + 1].tide.h)[0] : va);
+  return va + (vb - va) * (hour - a);
+}
+// 上げ◯分・下げ◯分(前後の満潮・干潮のあいだのどこにいるか)
+function tidePhase(days, di, hour){
+  var ev = []; days.forEach(function(d, k){ if (!d.tide) return; d.tide.hi.forEach(function(e){ ev.push([k * 24 + hm(e[0]), e[1], 1]); }); d.tide.lo.forEach(function(e){ ev.push([k * 24 + hm(e[0]), e[1], 0]); }); });
+  ev.sort(function(a, b){ return a[0] - b[0]; });
+  var t = di * 24 + hour, lv = tideAt(days, di, hour), p = null, n = null;
+  ev.forEach(function(e){ if (e[0] <= t) p = e; else if (!n) n = e; });
+  if (lv == null || !p || !n || p[2] === n[2] || p[1] === n[1]) return null;
+  var up = n[2] === 1, f = clamp(up ? (lv - p[1]) / (n[1] - p[1]) : (p[1] - lv) / (p[1] - n[1]), 0, 1), bun = Math.round(f * 10);
+  return { up:up, bun:bun, text: (up ? "上げ" : "下げ") + (bun <= 0 ? "はじめ" : bun >= 10 ? "いっぱい" : bun + "分"), next: (up ? "満潮" : "干潮") + "は" + hmText(((n[0] % 24) + 24) % 24) };
+}
+// 月の形(黄経差 0=新月, 180=満月)
+function moonIcon(e){
+  var s = svg("svg", { viewBox:"0 0 24 24", "class":"moon", role:"img", "aria-label":"月齢" + (e / 360 * 29.53).toFixed(0) }), p = e / 360, r = 9, rx = (r * Math.abs(Math.cos(e * Math.PI / 180))).toFixed(2);
+  s.appendChild(svg("circle", { cx:12, cy:12, r:r, "class":"md" }));
+  var wax = p < 0.5, d = "M12 3 A9 9 0 0 " + (wax ? 1 : 0) + " 12 21 A" + rx + " 9 0 0 " + (wax ? (p < 0.25 ? 0 : 1) : (p > 0.75 ? 1 : 0)) + " 12 3 Z";
+  s.appendChild(svg("path", { d:d, "class":"ml" })); s.appendChild(svg("circle", { cx:12, cy:12, r:r, "class":"mo" }));
+  return s;
+}
+// その日の干満差(cm)
+function tideRange(d){ if (!d.tide) return null; var a = d.tide.h.concat(d.tide.hi.map(function(e){ return e[1]; }), d.tide.lo.map(function(e){ return e[1]; })); return Math.max.apply(null, a) - Math.min.apply(null, a); }
+// 1日ぶんの潮位グラフ(0〜24時)。縦の目盛りは7日間で共通、太い線は潮がよく動く時間
+function tideDayChart(d, next, lo, hi, wkRate, opt){
+  opt = opt || {};
+  var Wd = 340, Hh = 184, L = 30, Rr = 8, T = 56, B = 22, pw = Wd - L - Rr, ph = Hh - T - B;
+  var s = svg("svg", { viewBox:"0 0 " + Wd + " " + Hh, "class":"tday", role:"img", "aria-label":"この日の潮位グラフ" });
+  var X = function(h){ return L + h / 24 * pw; }, Y = function(v){ return T + ph - (v - lo) / Math.max(1, hi - lo) * ph; };
+  var vals = (d.tide.hf || d.tide.h).slice(); vals.push(next && next.tide ? (next.tide.hf || next.tide.h)[0] : vals[23]);
+  var r = hm(d.rise), st = hm(d.set);
+  s.appendChild(svg("rect", { x:X(0), y:T, width:X(r) - X(0), height:ph, "class":"tn" })); s.appendChild(svg("rect", { x:X(st), y:T, width:X(24) - X(st), height:ph, "class":"tn" }));
+  // 上の帯: 月が出ている時間(上段)と、日が出ている時間(下段)
+  var band = function(a, b, y, cls, la, lb){ if (b - a <= 0) return; s.appendChild(svg("rect", { x:X(a), y:y, width:X(b) - X(a), height:11, rx:2, "class":cls }));
+    var w = X(b) - X(a); if (la && w > 34) { var t1 = svg("text", { x:X(a) + 3, y:y + 8.6, "class":"bt" }); t1.textContent = la; s.appendChild(t1); }
+    if (lb && w > 70) { var t2 = svg("text", { x:X(b) - 3, y:y + 8.6, "text-anchor":"end", "class":"bt" }); t2.textContent = lb; s.appendChild(t2); } };
+  var mt = opt.moon;
+  if (mt) { if (mt.rise != null && mt.set != null && mt.set < mt.rise) { band(0, mt.set, 8, "bm", null, hmText(mt.set)); band(mt.rise, 24, 8, "bm", hmText(mt.rise), null); }
+    else band(mt.rise == null ? 0 : mt.rise, mt.set == null ? 24 : mt.set, 8, "bm", mt.rise == null ? null : hmText(mt.rise), mt.set == null ? null : hmText(mt.set)); }
+  band(r, st, 22, "bs", hhmm(d.rise), hhmm(d.set));
+  [lo, (lo + hi) / 2, hi].forEach(function(v){ s.appendChild(svg("line", { x1:L, x2:Wd - Rr, y1:Y(v), y2:Y(v), "class":"tg" })); var tx = svg("text", { x:L - 4, y:Y(v) + 3.5, "text-anchor":"end", "class":"tx" }); tx.textContent = Math.round(v); s.appendChild(tx); });
+  [0, 6, 12, 18, 24].forEach(function(h){ var tx = svg("text", { x:X(h), y:Hh - 6, "text-anchor": h === 0 ? "start" : h === 24 ? "end" : "middle", "class":"tx" }); tx.textContent = h + "時"; s.appendChild(tx); s.appendChild(svg("line", { x1:X(h), x2:X(h), y1:T, y2:T + ph, "class":"tg" })); });
+  var pts = vals.map(function(v, h){ return [X(h), Y(v)]; }), seg = function(a, b){ var o = "M" + pts[a][0].toFixed(1) + " " + pts[a][1].toFixed(1); for (var i = a; i < b; i++) { var pa = pts[Math.max(0, i - 1)], p0 = pts[i], p1 = pts[i + 1], pb = pts[Math.min(pts.length - 1, i + 2)];
+      o += " C" + (p0[0] + (p1[0] - pa[0]) / 6).toFixed(1) + " " + (p0[1] + (p1[1] - pa[1]) / 6).toFixed(1) + " " + (p1[0] - (pb[0] - p0[0]) / 6).toFixed(1) + " " + (p1[1] - (pb[1] - p0[1]) / 6).toFixed(1) + " " + p1[0].toFixed(1) + " " + p1[1].toFixed(1); } return o; };
+  s.appendChild(svg("path", { d: seg(0, 24) + " L" + X(24) + " " + (T + ph) + " L" + X(0) + " " + (T + ph) + " Z", "class":"ta" }));
+  s.appendChild(svg("path", { d: seg(0, 24), "class":"tl" }));
+  for (var h = 0; h < 24; h++) if (wkRate > 0 && Math.abs(vals[h + 1] - vals[h]) >= wkRate * 0.5) s.appendChild(svg("path", { d: seg(h, h + 1), "class":"tf" }));
+  [[d.tide.hi, "満", -1], [d.tide.lo, "干", 1]].forEach(function(g){ g[0].forEach(function(e){
+    var px = X(hm(e[0])), py = Y(e[1]);
+    s.appendChild(svg("circle", { cx:px.toFixed(1), cy:py.toFixed(1), r:3.2, "class": g[2] < 0 ? "th" : "tw" }));
+    var tx = svg("text", { x: Math.max(L + 30, Math.min(Wd - Rr - 30, px)).toFixed(1), y: (g[2] < 0 ? Math.max(46, py - 7) : (py + 15 > T + ph - 2 ? py - 8 : py + 15)).toFixed(1), "text-anchor":"middle", "class":"tt" });
+    tx.textContent = g[1] + hhmm(e[0]) + " " + e[1] + "cm"; s.appendChild(tx); }); });
+  var lvAt = function(h){ var a = Math.min(23, Math.floor(h)); return vals[a] + (vals[a + 1] - vals[a]) * (h - a); };
+  if (opt.now != null) { s.appendChild(svg("line", { x1:X(opt.now), x2:X(opt.now), y1:T, y2:T + ph, "class":"nw" })); s.appendChild(svg("circle", { cx:X(opt.now), cy:Y(lvAt(opt.now)), r:4.2, "class":"nwd" })); }
+  if (opt.mark != null) { s.appendChild(svg("line", { x1:X(opt.mark), x2:X(opt.mark), y1:T, y2:T + ph, "class":"mk" })); s.appendChild(svg("circle", { cx:X(opt.mark), cy:Y(lvAt(opt.mark)), r:5.2, "class":"mkd" })); }
+  return s;
+}
 function tideSvg(d, lo, hi){
   var s = svg("svg", { "class":"tide", viewBox:"0 0 160 34", preserveAspectRatio:"none", role:"img", "aria-label":"潮位の動き" });
   var y = function(v){ return 30 - (v - lo) / Math.max(1, hi - lo) * 26; }, x = function(h){ return (h - 4) * 10 + 5; }, pts = [];
@@ -578,6 +702,10 @@ function render(){
   $("empty").hidden = true;
   var tmin = 999, tmax = -999;
   days.forEach(function(d){ if (d.tide) d.tide.h.forEach(function(v){ tmin = Math.min(tmin, v); tmax = Math.max(tmax, v); }); });
+  var cLo = tmin, cHi = tmax, wkRate = 0, wkRange = 0;
+  setTimeout(function(){ viewTide = { lo:cLo, hi:cHi, rate:wkRate, range:wkRange }; if (viewDays.length) drawSea(false); }, 0);
+  days.forEach(function(d){ if (!d.tide) return; d.tide.hi.concat(d.tide.lo).forEach(function(e){ cLo = Math.min(cLo, e[1]); cHi = Math.max(cHi, e[1]); });
+    var hv = d.tide.hf || d.tide.h; for (var q = 0; q < 23; q++) wkRate = Math.max(wkRate, Math.abs(hv[q + 1] - hv[q])); wkRange = Math.max(wkRange, tideRange(d)); });
 
   var age = (now - f.fetched) / 3600e3, fd = jst(f.fetched);
   $("meta").textContent = "予報の取得: " + (fd.getUTCMonth()+1) + "/" + fd.getUTCDate() + " " + fd.getUTCHours() + ":" + ("0"+fd.getUTCMinutes()).slice(-2) + "(Open-Meteo)。地点 北緯" + place.lat.toFixed(3) + "・東経" + place.lon.toFixed(3);
@@ -623,7 +751,7 @@ function render(){
     var win = el("span","win");
     if (d.verdict === "go") win.appendChild(el("span","num", spans(d.go))); else if (d.verdict === "ok") win.appendChild(el("span","num", spans(d.ok))); else win.textContent = LIMITS.shore ? "できる時間帯なし" : "出せる時間帯なし";
     head.appendChild(win);
-    var op = el("span","open"); op.appendChild(el("span","a","1時間ごとを見る")); op.appendChild(el("span","b","閉じる")); head.appendChild(op);
+    var op = el("span","open"); op.appendChild(el("span","a","詳細を見る")); op.appendChild(el("span","b","閉じる")); head.appendChild(op);
     sum.appendChild(head);
     var strip = el("div","strip"), ticks = el("div","ticks");
     for (var h = 4; h <= 19; h++) {
@@ -636,7 +764,15 @@ function render(){
       ev.preventDefault(); ev.stopPropagation();
       var r = strip.getBoundingClientRect(); jumpTo(di, clamp(Math.floor((ev.clientX - r.left) / r.width * 16), 0, 15) + 4);
     });
-    sum.appendChild(strip); if (d.tide) sum.appendChild(tideSvg(d, tmin, tmax)); sum.appendChild(ticks); sum.appendChild(wxLine(d)); sum.appendChild(facts(d));
+    sum.appendChild(strip); sum.appendChild(ticks); sum.appendChild(wxLine(d));
+    var more = el("div","more");
+    if (d.tide) {
+      var rg = tideRange(d), cap = el("p","tcap"); cap.appendChild(moonIcon(moonElong(d.ts + 12 * 3600000))); cap.appendChild(el("b", "shio", d.shio));
+      cap.appendChild(document.createTextNode(" 干満差 " + rg + "cm" + (wkRange > 0 ? "(この7日で最大の日は" + wkRange + "cm)" : "")));
+      more.appendChild(cap); more.appendChild(tideDayChart(d, days[di + 1], cLo, cHi, wkRate, { moon: moonTimes(d.ts, place.lat, place.lon), now: isToday ? (now - d.ts) / 3600000 : null }));
+      more.appendChild(el("p","morelabel","太い線は、潮がよく動く時間です。上の帯は、月が出ている時間(上段)と日が出ている時間(下段)。縦の目盛り(cm)は7日間で共通です。"));
+    }
+    more.appendChild(facts(d));
     var notes = [], dl = d.hours.filter(function(x){ return x.day && x.v !== "no"; });
     if (d.verdict === "go" && spans(d.ok) !== spans(d.go)) notes.push("要注意まで含めると " + spans(d.ok));
     if (dl.some(function(x){ return x.off; })) notes.push("出し風の時間あり");
@@ -644,11 +780,11 @@ function render(){
     if (dl.some(function(x){ return x.swell; })) notes.push("うねりの時間あり");
     if (d.hours.some(function(x){ return x.day && x.thunder; })) notes.push("雷の予報あり");
     if (d.hours.some(function(x){ return x.day && x.fog; })) notes.push("霧の時間あり");
-    if (notes.length) sum.appendChild(el("p","extra", notes.join(" / ")));
-    det.appendChild(sum);
+    if (notes.length) more.appendChild(el("p","extra", notes.join(" / ")));
+    det.appendChild(sum); det.appendChild(more);
 
     var tb = el("div","tablebox"), t = el("table","hourly"), hr = el("tr");
-    ["時刻","判定","天気","気温","降水","風 m/s","突風","波 m","周期 秒","うねり m","周期 秒","潮位 cm","注意"].forEach(function(s){ hr.appendChild(el("th", null, s)); });
+    ["時刻","判定","天気","気温","降水","風(突風) m/s","波 m","周期 秒","うねり m","周期 秒","潮位 cm","注意"].forEach(function(s){ hr.appendChild(el("th", null, s)); });
     var thead = el("thead"); thead.appendChild(hr); t.appendChild(thead);
     var body = el("tbody");
     for (var k = 4; k <= 19; k++) {
@@ -658,8 +794,7 @@ function render(){
       var wxc = el("td", "wxcell"); wxc.appendChild(wxIcon(wxInfo(y.wc).k)); wxc.appendChild(document.createTextNode(wxInfo(y.wc).t)); tr.appendChild(wxc);
       tr.appendChild(el("td","num", y.tp != null ? Math.round(y.tp) + "℃" : "—"));
       tr.appendChild(el("td","num" + (y.pp >= 50 ? " over" : ""), y.pp != null ? y.pp + "%" : "—"));
-      var w = el("td"); w.appendChild(document.createTextNode(dirName(y.dir) + " ")); w.appendChild(el("span","num" + (y.ws > LIMITS.goWind ? " over" : ""), y.ws.toFixed(1))); tr.appendChild(w);
-      tr.appendChild(el("td","num" + (y.gust ? " over" : ""), y.wg.toFixed(1)));
+      var w = el("td"); w.appendChild(document.createTextNode(dirName(y.dir) + " ")); w.appendChild(el("span","num" + (y.ws > LIMITS.goWind ? " over" : ""), y.ws.toFixed(1))); w.appendChild(el("span","num gu2" + (y.gust ? " over" : ""), " (" + y.wg.toFixed(1) + ")")); tr.appendChild(w);
       tr.appendChild(el("td","num" + (y.wh > LIMITS.goWave ? " over" : ""), y.wh.toFixed(1)));
       tr.appendChild(el("td","num", y.wp.toFixed(1)));
       var sw = el("td"); sw.appendChild(document.createTextNode(dirName(y.sd) + " ")); sw.appendChild(el("span","num", y.sh.toFixed(1))); tr.appendChild(sw);
@@ -680,6 +815,14 @@ function render(){
     det.appendChild(tb); host.appendChild(det);
   });
 
+  var sk = $("shiowk"); sk.textContent = "";
+  days.forEach(function(d){
+    var L = dateLabel(d.ts), rg = tideRange(d), c = el("div","sc" + (d.ts === today ? " now" : ""));
+    c.appendChild(el("span","sv num", rg != null ? rg + "cm" : "—"));
+    var bar = el("div","sb"), fill = el("i"); fill.style.height = (rg != null && wkRange > 0 ? Math.max(6, rg / wkRange * 100) : 0) + "%"; bar.appendChild(fill); c.appendChild(bar);
+    c.appendChild(moonIcon(moonElong(d.ts + 12 * 3600000))); c.appendChild(el("span","sn", d.shio)); c.appendChild(el("span","sd num", L.md)); c.appendChild(el("span","sw", L.w));
+    sk.appendChild(c);
+  });
   var sec = $("tidesec"), tt = $("tidetable"); tt.textContent = "";
   sec.hidden = !days.some(function(d){ return d.tide; });
   var hr2 = el("tr"); ["日付","潮","満潮","干潮","日の出","日の入"].forEach(function(s){ hr2.appendChild(el("th", null, s)); });
@@ -745,6 +888,7 @@ function drawSea(rebuild){
   var dg = svg("g", { transform:"rotate(" + ((x.dir + 180) % 360) + " 20 20)" }); dg.appendChild(svg("path", { d:"M20 9 L27 22 H22.5 V32 H17.5 V22 H13 Z", "class":"ar" })); ds.appendChild(dg);
   dl.appendChild(ds); dl.appendChild(el("span", null, x.ws < 1 ? "無風" : dirName(x.dir) + "の風"));
   if (rebuild) { buildMeteo(); $("nextbtn").textContent = "次の" + VNAME.go + "へ"; }
+  drawCompass(x); drawTideNow(d);
   markMeteo(rebuild);
   var dayness = clamp((sel.h - (rise - 0.7)) / 1.2, 0, 1) * clamp(((set + 0.7) - sel.h) / 1.2, 0, 1);
   var tl = 999, th = -999; viewDays.forEach(function(q){ if (q.tide) q.tide.h.forEach(function(v){ tl = Math.min(tl, v); th = Math.max(th, v); }); });
@@ -756,6 +900,42 @@ function drawSea(rebuild){
     launch: (!LIMITS.shore && x.day && x.v !== "no") ? 1 : 0, shore: LIMITS.shore ? 1 : 0, land: !LIMITS.shore ? 0 : ($("boat").value === "port" ? 2 : 1), angl: (LIMITS.shore && x.day && x.v !== "no") ? 1 : 0 };
   if (!cur || RM) cur = Object.assign({}, tgt);
   kick();
+}
+// 方位の輪: 茶色が陸、青が海。矢印は外から中心へ(風やうねりが来る向き)
+var viewTide = null;
+function drawCompass(x){
+  var host = $("compass"), tx = $("cmptx"); host.textContent = ""; tx.textContent = "";
+  var s = svg("svg", { viewBox:"0 0 150 150", "class":"compass", role:"img", "aria-label":"風とうねりの向き" }), R = Math.PI / 180, c = 75, r = 52;
+  var pt = function(deg, rad){ return [c + rad * Math.sin(deg * R), c - rad * Math.cos(deg * R)]; };
+  s.appendChild(svg("circle", { cx:c, cy:c, r:r, "class":"csea" }));
+  var a0 = pt(place.b + 90, r), a1 = pt(place.b + 270, r);
+  s.appendChild(svg("path", { d:"M" + a0[0].toFixed(1) + " " + a0[1].toFixed(1) + " A" + r + " " + r + " 0 0 1 " + a1[0].toFixed(1) + " " + a1[1].toFixed(1) + " Z", "class":"cland" }));
+  s.appendChild(svg("circle", { cx:c, cy:c, r:r, "class":"cring" }));
+  [["北",0],["東",90],["南",180],["西",270]].forEach(function(q){ var p = pt(q[1], r + 13), t = svg("text", { x:p[0], y:p[1] + 4.5, "text-anchor":"middle", "class":"cn" }); t.textContent = q[0]; s.appendChild(t); });
+  var lp = pt(place.b + 180, r * 0.55), sp = pt(place.b, r * 0.55);
+  var t1 = svg("text", { x:lp[0], y:lp[1] + 4, "text-anchor":"middle", "class":"cl" }); t1.textContent = "陸"; s.appendChild(t1);
+  var t2 = svg("text", { x:sp[0], y:sp[1] + 4, "text-anchor":"middle", "class":"cl cs" }); t2.textContent = "海"; s.appendChild(t2);
+  var arrow = function(deg, cls, w, len){ var g = svg("g", { transform:"rotate(" + deg + " " + c + " " + c + ")", "class":cls }), y0 = c - r - 4, y1 = c - r - 4 + len;
+    g.appendChild(svg("path", { d:"M" + (c - w / 2) + " " + y0 + " H" + (c + w / 2) + " V" + (y1 - w * 1.1) + " H" + (c + w * 1.2) + " L" + c + " " + y1 + " L" + (c - w * 1.2) + " " + (y1 - w * 1.1) + " H" + (c - w / 2) + " Z" })); s.appendChild(g); };
+  if (x.sh >= 0.05) arrow(x.sd, "asw", 9, 30);
+  if (x.ws >= 1) arrow(x.dir, "awd" + (x.off ? " off" : ""), 6, 46);
+  host.appendChild(s);
+  var along = windAlong(x.dir, place.b), rel = x.ws < 1 ? "" : along > 0.35 ? "(陸から沖へ)" : along < -0.35 ? "(海から岸へ)" : "(岸に沿う)";
+  var line = function(cls, label, text){ var p = el("p"); p.appendChild(el("i", "dot " + cls)); p.appendChild(el("b", null, label)); p.appendChild(document.createTextNode(text)); tx.appendChild(p); };
+  line("awd" + (x.off ? " off" : ""), "風", x.ws < 1 ? "ほぼ無風" : dirName(x.dir) + " " + x.ws.toFixed(1) + "m/s " + rel);
+  line("none", "突風", x.wg.toFixed(1) + "m/s");
+  line("asw", "うねり", x.sh >= 0.05 ? dirName(x.sd) + " " + x.sh.toFixed(1) + "m・間隔" + x.sp.toFixed(1) + "秒" : "ほぼなし");
+  line("none", "波", dirName(x.wd != null ? x.wd : x.sd) + " " + x.wh.toFixed(1) + "m・周期" + x.wp.toFixed(1) + "秒");
+}
+// 選んだ時刻の潮: 潮位・上げ下げ・その日のグラフ
+function drawTideNow(d){
+  var cap = $("tnow"), host = $("tnowchart"); cap.textContent = ""; host.textContent = "";
+  if (!d.tide || !viewTide) { cap.textContent = d.tide ? "" : "この地点は潮の予報がありません。"; return; }
+  var lv = tideAt(viewDays, sel.di, sel.h), ph = tidePhase(viewDays, sel.di, sel.h), e = moonElong(d.ts + 12 * 3600000);
+  cap.appendChild(moonIcon(e)); cap.appendChild(el("b", "shio", d.shio));
+  cap.appendChild(document.createTextNode(" 月齢" + (e / 360 * 29.53).toFixed(1) + "・" + sel.h + ":00 の潮位 " + Math.round(lv) + "cm" + (ph ? "・" : "")));
+  if (ph) { cap.appendChild(el("b", "bun", ph.text)); cap.appendChild(document.createTextNode("(" + ph.next + ")")); }
+  host.appendChild(tideDayChart(d, viewDays[sel.di + 1], viewTide.lo, viewTide.hi, viewTide.rate, { moon: moonTimes(d.ts, place.lat, place.lon), mark: sel.h, now: d.ts === viewToday ? (Date.now() - d.ts) / 3600000 : null }));
 }
 // 下の一覧からタップされた日・時刻を、海のようすに映す
 function jumpTo(di, h){
@@ -906,7 +1086,7 @@ var mgStep = +load("shukko:step", 3) === 1 ? 1 : 3, mgCols = [];
 function arrowSvg(deg, off){ var s = svg("svg", { viewBox:"0 0 20 20", "class":"arr" + (off ? " off" : "") }), g = svg("g", { transform:"rotate(" + ((deg + 180) % 360) + " 10 10)" }); g.appendChild(svg("path", { d:"M10 2 L15 10.5 H11.6 V18 H8.4 V10.5 H5 Z" })); s.appendChild(g); return s; }
 function buildMeteo(){
   var t = $("mg"), rows = {}; t.textContent = ""; mgCols = [];
-  [["day","日付"],["hr","時刻"],["v","判定"],["wx","天気"],["tp","気温"],["ws","風"],["wd","風向"],["wg","突風"],["wh","波"],["sh","うねり"],["sp","間隔"],["sst","水温"],["td","潮"]].forEach(function(q){
+  [["day","日付"],["hr","時刻"],["v","判定"],["wx","天気"],["tp","気温"],["ws","風(突風)"],["wd","風向"],["wh","波"],["sh","うねり"],["sp","間隔"],["sst","水温"],["td","潮"]].forEach(function(q){
     var tr = el("tr", "r-" + q[0]); tr.appendChild(el("th", null, q[1])); rows[q[0]] = tr; t.appendChild(tr); });
   viewDays.forEach(function(d, di){
     var L = dateLabel(d.ts), n = 0;
@@ -918,9 +1098,9 @@ function buildMeteo(){
       var vs = el("div", "vs"); for (var k = 0; k < mgStep; k++) { var y = d.hours[h + k]; vs.appendChild(el("i", y.day ? y.v : "")); } add("v", vs);
       add("wx", wxIcon(wxInfo(x.wc).k));
       add("tp", x.tp != null ? String(Math.round(x.tp)) : null);
-      add("ws", x.ws.toFixed(1), x.ws > LIMITS.okWind ? "t-no" : x.ws > LIMITS.goWind ? "t-ok" : "");
+      var wbox = el("span"); wbox.appendChild(document.createTextNode(x.ws.toFixed(1))); wbox.appendChild(el("span", "gu" + (x.gust ? " over" : ""), "(" + x.wg.toFixed(1) + ")"));
+      add("ws", wbox, (x.ws > LIMITS.okWind || x.gust) ? "t-no" : x.ws > LIMITS.goWind ? "t-ok" : "");
       add("wd", x.ws < 1 ? "・" : arrowSvg(x.dir, x.off));
-      add("wg", x.wg.toFixed(1), x.gust ? "t-no" : "");
       add("wh", x.wh.toFixed(1), x.wh > LIMITS.okWave ? "t-no" : x.wh > LIMITS.goWave ? "t-ok" : "");
       add("sh", x.sh.toFixed(1)); add("sp", x.sp.toFixed(1), x.swell ? "t-ok" : "");
       add("sst", x.sst != null ? x.sst.toFixed(1) : null);
@@ -942,7 +1122,7 @@ function tideCurve(tr){
   var lo = 1e9, hi = -1e9; viewDays.forEach(function(d){ if (d.tide) { d.tide.h.forEach(function(v){ lo = Math.min(lo, v); hi = Math.max(hi, v); }); d.tide.hi.concat(d.tide.lo).forEach(function(e){ lo = Math.min(lo, e[1]); hi = Math.max(hi, e[1]); }); } });
   var Y = function(v){ return H - pad - (v - lo) / Math.max(1, hi - lo) * (H - pad * 2); };
   var s = svg("svg", { "class":"tidecurve", width:total, height:H, viewBox:"0 0 " + total + " " + H, role:"img", "aria-label":"潮位の曲線" }), pts = [];
-  viewDays.forEach(function(d, di){ if (!d.tide) return; for (var h = 0; h < 24; h++) pts.push([X(di * 24 + h), Y(d.tide.h[h])]); });
+  viewDays.forEach(function(d, di){ if (!d.tide) return; for (var h = 0; h < 24; h++) pts.push([X(di * 24 + h), Y((d.tide.hf || d.tide.h)[h])]); });
   if (pts.length < 2) return;
   // なめらかな曲線(となり合う点の中間を通す)
   var dstr = "M" + pts[0][0].toFixed(1) + " " + pts[0][1].toFixed(1);
@@ -997,7 +1177,7 @@ function syncBar(){
   $("bearing").value = String(nearest8(place.b));
 }
 function nearest8(deg){ return (Math.round((((deg % 360) + 360) % 360) / 45) % 8) * 45; }
-function cacheKey(p){ return "shukko:fc:" + p.lat.toFixed(3) + "," + p.lon.toFixed(3); }
+function cacheKey(p){ return "shukko:fc3:" + p.lat.toFixed(3) + "," + p.lon.toFixed(3); }
 var loadSeq = 0;
 function show(p, force){
   place = p; save("shukko:place", p); syncBar(); stopPlay();
