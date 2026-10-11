@@ -890,16 +890,27 @@ function drawSea(rebuild){
   if (rebuild) { buildMeteo(); $("nextbtn").textContent = "次の" + VNAME.go + "へ"; }
   drawCompass(x); drawTideNow(d);
   markMeteo(rebuild);
-  var dayness = clamp((sel.h - (rise - 0.7)) / 1.2, 0, 1) * clamp(((set + 0.7) - sel.h) / 1.2, 0, 1);
+  tgt = sceneOf(d, sel.h, sel.h);
+  if (!cur || RM) cur = Object.assign({}, tgt);
+  kick();
+}
+// 絵の状態。h=その時刻の予報(整数時)、hf=空や太陽の位置に使う時刻(小数可)
+function sceneOf(d, h, hf){
+  var x = d.hours[clamp(h, 0, 23)], rise = hm(d.rise), set = hm(d.set), along = windAlong(x.dir, place.b);
   var tl = 999, th = -999; viewDays.forEach(function(q){ if (q.tide) q.tide.h.forEach(function(v){ tl = Math.min(tl, v); th = Math.max(th, v); }); });
-  tgt = { A: clamp(x.wh * 18, 1, 28), lam: 50 + x.wp * 16, per: Math.max(1.6, x.wp * 0.6), ws: x.ws, wg: x.wg,
-    sign: x.ws < 1 ? 0 : (along >= 0 ? 1 : -1) * Math.max(0.3, Math.abs(along)), tide: x.tide != null && th > tl ? (x.tide - tl) / (th - tl) : 0.5,
-    d: dayness, warm: Math.max(0, 1 - Math.min(Math.abs(sel.h - rise), Math.abs(sel.h - set)) / 1.3), sunT: clamp((sel.h - rise) / (set - rise), -0.1, 1.1),
+  var tv = tideAt(viewDays, viewDays.indexOf(d), clamp(hf, 0, 23.99));
+  return { A: clamp(x.wh * 18, 1, 28), lam: 50 + x.wp * 16, per: Math.max(1.6, x.wp * 0.6), ws: x.ws, wg: x.wg,
+    sign: x.ws < 1 ? 0 : (along >= 0 ? 1 : -1) * Math.max(0.3, Math.abs(along)), tide: tv != null && th > tl ? clamp((tv - tl) / (th - tl), 0, 1) : 0.5,
+    d: clamp((hf - (rise - 0.7)) / 1.2, 0, 1) * clamp(((set + 0.7) - hf) / 1.2, 0, 1), warm: Math.max(0, 1 - Math.min(Math.abs(hf - rise), Math.abs(hf - set)) / 1.3), sunT: clamp((hf - rise) / (set - rise), -0.1, 1.1),
     cloud: x.wc >= 3 ? 1 : x.wc === 2 ? 0.6 : x.wc === 1 ? 0.25 : 0, rain: (wxInfo(x.wc).k === "rain" || x.wc >= 95) ? 1 : 0, thunder: x.wc >= 95 ? 1 : 0,
     fog: x.fog ? 1 : 0, snow: wxInfo(x.wc).k === "snow" ? 1 : 0,
     launch: (!LIMITS.shore && x.day && x.v !== "no") ? 1 : 0, shore: LIMITS.shore ? 1 : 0, land: !LIMITS.shore ? 0 : ($("boat").value === "port" ? 2 : 1), angl: (LIMITS.shore && x.day && x.v !== "no") ? 1 : 0 };
-  if (!cur || RM) cur = Object.assign({}, tgt);
-  kick();
+}
+// 再生中: となり合う2つの時刻の状態をなめらかにつなぐ
+function sceneBlend(d, hf){
+  var h0 = Math.floor(hf), a = sceneOf(d, h0, hf), b = sceneOf(d, Math.min(23, h0 + 1), hf), f = hf - h0, o = {};
+  for (var k in a) o[k] = a[k] + (b[k] - a[k]) * f;
+  o.land = a.land; o.shore = a.shore; return o;
 }
 // 方位の輪: 茶色が陸、青が海。矢印は外から中心へ(風やうねりが来る向き)
 var viewTide = null;
@@ -950,11 +961,23 @@ function sizeCanvas(){
 }
 function mix(a, b, t){ return [a[0] + (b[0]-a[0])*t, a[1] + (b[1]-a[1])*t, a[2] + (b[2]-a[2])*t]; }
 function rgb(c, al){ return "rgba(" + (c[0]|0) + "," + (c[1]|0) + "," + (c[2]|0) + "," + (al == null ? 1 : al) + ")"; }
-function wy(x, off, amp){ var k = 2 * Math.PI / cur.lam; return amp * (Math.sin(k*x + phase + off) + 0.3 * Math.sin(2.3*k*x + 1.7*phase + off*2)) + Math.min(2.5, cur.ws * 0.2) * Math.sin(0.16*x + phase*3 + off); }
-function waveLayer(W, H, base, off, amp, col){
-  cx.beginPath(); cx.moveTo(0, H);
-  for (var x = 0; x <= W + 3; x += 3) cx.lineTo(x, base + wy(x, off, amp));
-  cx.lineTo(W, H); cx.closePath(); cx.fillStyle = col; cx.fill();
+// 波の高さ(下向きが正)。大きなうねりに2つの波を重ね、波頭をとがらせ、風のさざ波を乗せる。sp=層ごとの進む速さ
+function wy(x, off, amp, sp){
+  var k = 2 * Math.PI / cur.lam, ph = phase * (sp || 1), a = k * x + ph + off, q = 0.1 + Math.min(0.22, cur.ws * 0.022);
+  var chop = Math.min(3.4, cur.ws * 0.24);
+  return amp * (-(Math.cos(a) + q * Math.cos(2 * a)) * 0.78 + 0.26 * Math.sin(1.9 * k * x + 1.37 * ph + off * 2.1) + 0.15 * Math.sin(3.1 * k * x + 1.83 * ph + off * 0.7))
+    + chop * (0.6 * Math.sin(0.21 * x + ph * 3.1 + off) + 0.4 * Math.sin(0.37 * x - ph * 4.3 + off * 1.7));
+}
+function waveLayer(W, H, base, off, amp, col, sp, edge, foam){
+  var ys = [], x, i;
+  for (x = 0; x <= W + 2; x += 2) ys.push(base + wy(x, off, amp, sp));
+  cx.beginPath(); cx.moveTo(0, H); for (i = 0; i < ys.length; i++) cx.lineTo(i * 2, ys[i]); cx.lineTo(W, H); cx.closePath(); cx.fillStyle = col; cx.fill();
+  if (edge) { cx.beginPath(); for (i = 0; i < ys.length; i++) { if (i) cx.lineTo(i * 2, ys[i]); else cx.moveTo(0, ys[0]); } cx.strokeStyle = edge; cx.lineWidth = 1.2; cx.lineJoin = "round"; cx.stroke(); }
+  if (foam > 0.02) {                                                                    // 白波: 波頭のところだけ
+    cx.strokeStyle = "rgba(255,255,255," + Math.min(0.9, foam) + ")"; cx.lineWidth = 1.6 + foam * 1.4; cx.lineCap = "round";
+    for (i = 4; i < ys.length - 4; i++) if (ys[i] < ys[i - 1] && ys[i] <= ys[i + 1] && ys[i] < base - amp * 0.45) {
+      cx.beginPath(); cx.moveTo((i - 4) * 2, ys[i - 4] + 0.5); cx.quadraticCurveTo(i * 2, ys[i] - 1.2, (i + 3) * 2, ys[i + 3] + 0.8); cx.stroke(); }
+  }
 }
 // ミキオさんの船: 赤いゴムボート(白い帯・船尾にグレーの斜め線)、銀色の船外機、白いシートとクーラー、魚探、竿
 function drawBoat(bx, by, ang, s, dim, ashore){
@@ -1038,11 +1061,26 @@ function paint(){
     cx.beginPath(); cx.moveTo(xx, yy); cx.lineTo(xx - len * (p.sign >= 0 ? 1 : -1), yy); cx.stroke(); }
   // 海(奥→手前)と船
   var night = 1 - p.d, c1 = mix([86,170,200], [10,34,50], night * 0.75), c2 = mix([38,128,168], [8,28,42], night * 0.75), c3 = mix([20,90,128], [5,20,32], night * 0.75);
-  waveLayer(W, H, hor, 1.3, p.A * 0.6, rgb(c1)); waveLayer(W, H, hor + 14, 0, p.A, rgb(c2));
-  var sc = clamp(W / 360, 0.9, 1.5), seaX = W * 0.62, shoreX = W * 0.21, yb = hor + 14 + wy(seaX, 0, p.A), slope = (wy(seaX + 6, 0, p.A) - wy(seaX - 6, 0, p.A)) / 12;
-  var bx = shoreX + (seaX - shoreX) * p.launch, by = (hor - 14) + (yb + 6.5 - (hor - 14)) * p.launch, ba = clamp(Math.atan(slope), -0.3, 0.3) * p.launch + (1 - p.launch) * 0.06;
-  if (p.launch > 0.5 && p.shore < 0.5) drawBoat(bx, by, ba, sc, 1, false);
-  waveLayer(W, H, hor + 36, 2.4, p.A * 0.8, rgb(c3));
+  var foam = clamp((p.ws - 4.5) / 5, 0, 1) * (0.35 + 0.65 * p.d) + clamp((p.A - 14) / 14, 0, 0.5), hl = "rgba(255,255,255," + (0.10 + 0.16 * p.d) + ")";
+  waveLayer(W, H, hor - 3, 3.9, p.A * 0.32, rgb(mix(c1, [200,228,238], 0.25 * p.d)), 0.7, null, 0);
+  waveLayer(W, H, hor + 4, 1.3, p.A * 0.55, rgb(c1), 0.85, hl, foam * 0.45);
+  waveLayer(W, H, hor + 14, 0, p.A, rgb(c2), 1, hl, foam * 0.8);
+  var sc = clamp(W / 360, 0.9, 1.5), seaX = W * 0.62 + (RM ? 0 : Math.sin(phase) * p.A * 0.14), shoreX = W * 0.21, half = 22 * sc, n5 = 0, sum5 = 0;
+  for (var q5 = -2; q5 <= 2; q5++) { sum5 += wy(seaX + q5 * half / 2, 0, p.A, 1); n5++; }
+  var ty = hor + 14 + sum5 / n5 + 6.5, ta = clamp(Math.atan((wy(seaX + half, 0, p.A, 1) - wy(seaX - half, 0, p.A, 1)) / (2 * half)) * 0.6, -0.3, 0.3);
+  if (!boatSt || RM || p.launch < 0.5) boatSt = { y:ty, a:ta, vy:0, va:0 };
+  else { var bd = Math.min(frameDt, 0.05);                                              // ばねで追いかける(少し遅れて、行き過ぎて戻る)
+    boatSt.vy += ((ty - boatSt.y) * 70 - boatSt.vy * 9) * bd; boatSt.y += boatSt.vy * bd;
+    boatSt.va += ((ta - boatSt.a) * 55 - boatSt.va * 7.5) * bd; boatSt.a += boatSt.va * bd; }
+  var bx = shoreX + (seaX - shoreX) * p.launch, by = (hor - 14) + (boatSt.y - (hor - 14)) * p.launch, ba = boatSt.a * p.launch + (1 - p.launch) * 0.06;
+  if (p.launch > 0.5 && p.shore < 0.5) {
+    drawBoat(bx, by, ba, sc, 1, false);
+    cx.strokeStyle = "rgba(255,255,255," + (0.35 + 0.3 * p.d) + ")"; cx.lineWidth = 1.4; cx.lineCap = "round";                // 船べりの泡
+    cx.beginPath(); cx.moveTo(bx - 30 * sc, by + 1); cx.quadraticCurveTo(bx - 22 * sc, by + 3 + Math.sin(clock * 3) * 0.8, bx - 14 * sc, by + 1.5); cx.stroke();
+    cx.beginPath(); cx.moveTo(bx + 24 * sc, by + 1.5); cx.quadraticCurveTo(bx + 33 * sc, by + 3 + Math.cos(clock * 3.4) * 0.8, bx + 41 * sc, by + 1); cx.stroke();
+  }
+  waveLayer(W, H, hor + 31, 2.4, p.A * 0.85, rgb(mix(c2, c3, 0.6)), 1.12, hl, foam);
+  waveLayer(W, H, hor + 50, 5.1, p.A * 0.7, rgb(c3), 1.25, null, foam * 0.7);
   // 岸: 船のときは浜、磯釣りは岩場、漁港は堤防
   var landK = Math.round(p.land || 0);
   if (landK === 2) {
@@ -1073,10 +1111,21 @@ function paint(){
 function frame(ms){
   raf = 0; if (!cur || !tgt) return;
   var dt = lastT ? clamp((ms - lastT) / 1000, 0, 0.25) : 0.016; lastT = ms;
+  frameDt = dt;
+  if (playing) {                                                                          // 再生: 時刻を少しずつ進め、絵は2つの時刻のあいだを連続でつなぐ
+    var pd = viewDays[sel.di];
+    if (!pd) stopPlay(); else {
+      playT = Math.min(playLast, playT + dt / 1.6);
+      var ph0 = Math.min(23, Math.floor(playT)); if (ph0 !== sel.h) { sel.h = ph0; drawSea(false); }
+      tgt = sceneBlend(pd, Math.min(playT, 23.999));
+      if (playT >= playLast) stopPlay();
+    }
+  }
   if (RM) cur = Object.assign({}, tgt); else { var e = 1 - Math.exp(-dt * 5), el2 = 1 - Math.exp(-dt * 2.2); for (var k in tgt) cur[k] += (tgt[k] - cur[k]) * (k === "launch" ? el2 : e); clock += dt; phase += dt * 2 * Math.PI / cur.per; }
   paint();
-  if (!RM && seaOn && !document.hidden && !$("sea").hidden) raf = requestAnimationFrame(frame);
+  if (!RM && seaOn && !document.hidden && !$("sea").hidden && !raf) raf = requestAnimationFrame(frame);
 }
+var boatSt = null, frameDt = 0.016, playing = false, playT = 0, playLast = 0;
 function kick(){ if (!raf) { lastT = 0; raf = requestAnimationFrame(frame); } }
 if ("IntersectionObserver" in window) new IntersectionObserver(function(es){ seaOn = es[0].isIntersecting; if (seaOn) kick(); }).observe(cv);
 window.addEventListener("resize", kick);
@@ -1159,13 +1208,14 @@ $("nextbtn").addEventListener("click", function(){
     for (var j = 0; j < d.go.length; j++) { var r = d.go[j]; if (d.ts !== viewToday || r.to > viewNowH) { sel = { di:i, h: d.ts === viewToday ? Math.max(r.from, Math.min(viewNowH, r.to)) : r.from }; drawSea(true); return; } } }
   this.textContent = VNAME.go + "の時間なし";
 });
-function stopPlay(){ if (playTimer) { clearInterval(playTimer); playTimer = null; } $("playbtn").textContent = "再生"; }
+function stopPlay(){ playing = false; if (playTimer) { clearInterval(playTimer); playTimer = null; } $("playbtn").textContent = "再生"; }
 $("playbtn").addEventListener("click", function(){
-  if (playTimer) { stopPlay(); return; }
+  if (playing || playTimer) { stopPlay(); return; }
   var d = viewDays[sel.di]; if (!d) return;
   var first = Math.max(0, Math.ceil(hm(d.rise)) - 1), last = Math.min(23, Math.floor(hm(d.set)) + 1);
   sel.h = first; drawSea(false); this.textContent = "止める";
-  playTimer = setInterval(function(){ if (sel.h >= last) { stopPlay(); return; } sel.h++; drawSea(false); }, RM ? 2000 : 1500);
+  if (RM) playTimer = setInterval(function(){ if (sel.h >= last) { stopPlay(); return; } sel.h++; drawSea(false); }, 2000);
+  else { playT = first; playLast = last; playing = true; kick(); }
 });
 
 /* ---------- 地点の切り替え・お気に入り ---------- */
