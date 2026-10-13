@@ -282,6 +282,10 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
 .mapform input[type=text]{flex:1;min-width:0}
 .primary{background:var(--accent);color:var(--bg);border:0;border-radius:6px;padding:12px 16px;font-weight:800;font-size:calc(16px*var(--fs))}
 .primary:disabled{opacity:.45}
+.msearch{display:flex;gap:8px} .msearch input{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:16px} .msearch .primary{padding:8px 14px}
+.mres{display:flex;flex-direction:column;gap:6px;max-height:40vh;overflow-y:auto}
+.mitem{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-size:calc(15px*var(--fs));font-weight:700}
+.mitem small{display:block;font-weight:400;color:var(--muted);font-size:calc(12px*var(--fs))}
 .hint{font-size:calc(13px*var(--fs));color:var(--muted);margin:0}
 </style>
 </head>
@@ -388,10 +392,12 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
   <div class="pane" id="favpane"></div>
   <div class="pane" id="listpane" hidden></div>
   <div class="pane" id="mappane" hidden>
-    <p class="hint">地図をタップすると、その場所にピンが立ちます。丸印は地点リストの場所です。海の上か、海岸ぎりぎりを選んでください。</p>
+    <form class="msearch" id="msearch"><input type="search" id="mq" placeholder="地名・港名で探す(例: 越前町茂原)" enterkeyhint="search" aria-label="地名・港名で探す"><button class="primary" type="submit">検索</button></form>
+    <div class="mres" id="mres" hidden></div>
+    <p class="hint">検索するか、地図をタップするとピンが立ちます。丸印は地点リストの場所です。海の上か、海岸ぎりぎりを選んでください。</p>
     <div id="map"></div>
     <div class="mapform">
-      <div class="row"><input type="text" id="pinname" placeholder="地点の名前(例: いつもの浜)" maxlength="20" aria-label="地点の名前">
+      <div class="row"><input type="text" id="pinname" placeholder="この地点に付ける名前(例: いつもの浜)" maxlength="20" aria-label="この地点に付ける名前">
         <select id="pinbearing" aria-label="海の方角"></select></div>
       <button class="primary" id="usepin" type="button" disabled>地図をタップして場所を選ぶ</button>
     </div>
@@ -1374,6 +1380,7 @@ function initMap(){
     map.on("click", function(ev){ setPin(ev.latlng.lat, ev.latlng.lng, "", null, null); });
   } else map.setView([place.lat, place.lon], Math.max(map.getZoom(), 9));
   setTimeout(function(){ map.invalidateSize(); }, 50);
+  mapSetPin = setPin;
   function setPin(lat, lon, name, b, preset){
     pinPos = { lat:lat, lon:lon, preset:preset };
     if (pin) pin.setLatLng([lat, lon]); else pin = L.marker([lat, lon]).addTo(map);
@@ -1382,6 +1389,32 @@ function initMap(){
     btn.disabled = false; btn.textContent = "この地点の予報を見る";
   }
 }
+// 地名・港名で探す: 国土地理院の地名検索とOpenStreetMapを使い、日本海側の地点リストに近い場所を先に並べる
+var mapSetPin = null;
+function nearPreset(lat, lon){ var bd = 1e9; PRESETS.forEach(function(p){ var dy = (p.lat - lat) * 111, dx = (p.lon - lon) * 91, dd = Math.sqrt(dx * dx + dy * dy); if (dd < bd) bd = dd; }); return bd; }
+function placeSearch(q){
+  q = q.trim(); if (!q) return;
+  var box = $("mres"); box.hidden = false; box.textContent = "探しています…";
+  var key = q.replace(/(漁港|港|海岸|海水浴場|浜|堤防|防波堤|磯|岬|灯台)$/, "") || q, keys = key === q ? [q] : [q, key];
+  var jobs = [];
+  keys.forEach(function(k){
+    jobs.push(fetch("https://msearch.gsi.go.jp/address-search/AddressSearch?q=" + encodeURIComponent(k)).then(function(r){ return r.json(); }).then(function(a){ return a.map(function(x){ return { name:x.properties.title, lat:x.geometry.coordinates[1], lon:x.geometry.coordinates[0] }; }); }).catch(function(){ return []; }));
+    jobs.push(fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&countrycodes=jp&accept-language=ja&q=" + encodeURIComponent(k)).then(function(r){ return r.json(); }).then(function(a){ return a.filter(function(x){ return x.display_name.indexOf(key) >= 0; }).map(function(x){ var n = x.display_name.split(", "); return { name: n.slice(0, 3).join("・"), lat:+x.lat, lon:+x.lon }; }); }).catch(function(){ return []; }));
+  });
+  Promise.all(jobs).then(function(all){
+    var seen = {}, list = [];
+    all.forEach(function(a){ a.forEach(function(r){ var id = r.lat.toFixed(2) + "," + r.lon.toFixed(2); if (seen[id]) return; seen[id] = 1; r.dist = nearPreset(r.lat, r.lon); list.push(r); }); });
+    list.sort(function(a, b){ return (a.dist > 60) - (b.dist > 60) || a.dist - b.dist; });
+    box.textContent = "";
+    if (!list.length) { box.appendChild(el("p","hint","「" + q + "」は見つかりませんでした。港名で出ないときは、町や地区の名前(例: 越前町茂原)で探すか、地図を動かしてタップしてください。")); return; }
+    list.slice(0, 8).forEach(function(r){
+      var b = el("button","mitem"); b.type = "button"; b.textContent = r.name; b.appendChild(el("small", null, r.dist > 60 ? "日本海側から離れた場所" : "日本海側"));
+      b.addEventListener("click", function(){ box.hidden = true; if (map) { map.setView([r.lat, r.lon], 13); if (mapSetPin) mapSetPin(r.lat, r.lon, q, null, null); } });
+      box.appendChild(b);
+    });
+  });
+}
+$("msearch").addEventListener("submit", function(ev){ ev.preventDefault(); $("mq").blur(); placeSearch($("mq").value); });
 $("usepin").addEventListener("click", function(){
   if (!pinPos) return;
   var b = +$("pinbearing").value, name = $("pinname").value.trim();
