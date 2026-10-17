@@ -176,6 +176,20 @@ details.day[open] .more{animation:fadein .25s ease-out}
 .compass .csea{fill:var(--tide-soft)} .compass .cland{fill:var(--land)} .compass .cring{fill:none;stroke:var(--line);stroke-width:1.5}
 .compass .cn{fill:var(--muted);font-size:11px;font-weight:700;font-family:var(--jp)} .compass .cl.cs{fill:var(--ink)} .compass .cl{fill:#3D4A50;font-size:10px;font-weight:700;font-family:var(--jp);opacity:.75}
 .compass .awd path{fill:var(--accent);stroke:var(--surface);stroke-width:1} .compass .awd.off path{fill:var(--no)} .compass .asw path{fill:#E08A2C;stroke:var(--surface);stroke-width:1}
+.beach{width:calc(150px*var(--fs));max-width:48vw;height:auto;flex:none;display:block;border-radius:10px}
+.beach .sea{fill:var(--tide-soft)} .beach .land{fill:var(--land)} .beach .shore{fill:none;stroke:#fff;stroke-width:2;opacity:.8}
+.beach .lb{font-size:11px;font-weight:800;font-family:var(--jp);fill:var(--ink)} .beach .lb.m{fill:#3D4A50}
+.beach .crest{fill:none;stroke:#E08A2C;stroke-width:1.6;stroke-linecap:round;opacity:.45}
+.beach .streak{stroke:var(--accent);stroke-width:1.2;stroke-linecap:round;opacity:.3} .beach.off .streak{stroke:var(--no)}
+.beach .big path{fill:var(--accent);stroke:#fff;stroke-width:1.5} .beach.off .big path{fill:var(--no)} .beach .bsw path{fill:#E08A2C;stroke:#fff;stroke-width:1.5}
+.beach .nring{fill:var(--surface);stroke:var(--line)} .beach .nar{fill:var(--no)} .beach .nt{font-size:8px;font-weight:800;fill:var(--muted);font-family:var(--jp)}
+.beach .me{fill:var(--ink)} .beach .tag{paint-order:stroke;stroke:var(--surface);stroke-width:3px;font-size:12px} .beach .tag.big{fill:var(--accent)} .beach.off .tag.big{fill:var(--no)} .beach .tag.bsw{fill:#C8701C}
+.cmp:has(.beach){flex-direction:column;align-items:stretch} .cmp .beach{width:100%;max-width:calc(240px*var(--fs));margin:0 auto}
+.beach .mvw{animation:mvw var(--dw,2s) linear infinite} .beach .mvs{animation:mvs var(--ds,3s) linear infinite}
+@keyframes mvw{from{transform:translateY(0)}to{transform:translateY(-40px)}} @keyframes mvs{from{transform:translateY(0)}to{transform:translateY(-24px)}}
+@media (prefers-reduced-motion:reduce){.beach .mvw,.beach .mvs{animation:none}}
+.cmptx .rel{font-weight:800}
+.mg .arr.sw{fill:#E08A2C}
 .cmptx{min-width:0;font-size:calc(13px*var(--fs));line-height:1.45} .cmptx p{margin:0 0 3px} .cmptx b{margin-right:6px;font-size:calc(11px*var(--fs));color:var(--muted)}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px} .dot.awd{background:var(--accent)} .dot.awd.off{background:var(--no)} .dot.asw{background:#E08A2C} .dot.none{background:transparent}
 .tday .tn{fill:var(--night);opacity:.75} .tday .tg{stroke:var(--line);stroke-width:1} .tday .tx{fill:var(--muted);font-size:10px;font-family:var(--num)}
@@ -337,7 +351,7 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
       <div class="mgwrap" id="mgwrap"><table class="mg" id="mg"></table></div>
       <p class="seaextra">表は横に動かせます(7日分)。列をタップすると、上の絵がその時刻の海のようすに変わります。上の絵を左右にスワイプ(または ‹ › を押す)と、同じ時刻のまま前後の日に切り替わります。風の下のカッコは最大瞬間風速(突風)です。単位は、風・突風が m/s、波・うねりが m、間隔が秒、気温・水温が ℃です。風の矢印は風が吹いていく向きで、赤い矢印は出し風。潮の行は潮位の曲線で、山が満潮、谷が干潮です(時刻つき)。</p>
       <div class="pair">
-        <div class="card2"><h3>風とうねりの向き</h3><div class="cmp"><span id="compass"></span><div class="cmptx" id="cmptx"></div></div></div>
+        <div class="card2"><h3>風とうねりの向き(浜辺に立って海を見た図)</h3><div class="cmp"><span id="compass"></span><div class="cmptx" id="cmptx"></div></div></div>
         <div class="card2"><h3>潮</h3><p class="tcap" id="tnow"></p><div id="tnowchart"></div></div>
       </div>
       <p class="why" id="seawhy"></p>
@@ -947,12 +961,12 @@ function drawSea(rebuild){
   var sw = $("seawx"), wi = wxInfo(x.wc); sw.textContent = ""; sw.appendChild(wxIcon(wi.k)); sw.appendChild(el("span", "wxname", wi.t));
   [["気温", x.tp != null ? Math.round(x.tp) + "℃" : null], ["降水", x.pp != null ? x.pp + "%" + (x.pr > 0 ? "・" + x.pr.toFixed(1) + "mm" : "") : null], ["水温", x.sst != null ? x.sst.toFixed(1) + "℃" : null]].forEach(function(q){
     if (q[1] == null) return; var sp = el("span"); sp.appendChild(el("b", null, q[0])); sp.appendChild(el("span", "num", q[1])); sw.appendChild(sp); });
-  $("seaextra").textContent = dirName(x.dir) + "の風。波は" + dirName(x.wd != null ? x.wd : x.sd) + "から、周期" + x.wp.toFixed(1) + "秒。うねり" + x.sh.toFixed(1) + "m(周期" + x.sp.toFixed(1) + "秒)" + (x.tide != null ? "。潮位" + x.tide + "cm" : "") + "。";
+  $("seaextra").textContent = dirName(x.dir) + "の風(" + fromWord(x.dir) + ")。波は" + dirName(x.wd != null ? x.wd : x.sd) + "から、周期" + x.wp.toFixed(1) + "秒。うねり" + x.sh.toFixed(1) + "m(周期" + x.sp.toFixed(1) + "秒)" + (x.tide != null ? "。潮位" + x.tide + "cm" : "") + "。";
   var dl = $("dial"); dl.textContent = ""; dl.className = "dial" + (offshore ? " off" : "");
   var ds = svg("svg", { viewBox:"0 0 40 40", role:"img", "aria-label":"風向き" }); ds.appendChild(svg("circle", { cx:20, cy:20, r:18.5, "class":"ring" }));
-  var nt = svg("text", { x:20, y:9, "text-anchor":"middle", "class":"n" }); nt.textContent = "北"; ds.appendChild(nt);
-  var dg = svg("g", { transform:"rotate(" + ((x.dir + 180) % 360) + " 20 20)" }); dg.appendChild(svg("path", { d:"M20 9 L27 22 H22.5 V32 H17.5 V22 H13 Z", "class":"ar" })); ds.appendChild(dg);
-  dl.appendChild(ds); dl.appendChild(el("span", null, x.ws < 1 ? "無風" : dirName(x.dir) + "の風"));
+  var nt = svg("text", { x:33, y:23.5, "text-anchor":"middle", "class":"n" }); nt.textContent = "沖"; ds.appendChild(nt);
+  var dg = svg("g", { transform:"rotate(" + (relTo(x.dir + 180) + 90) + " 20 20)" }); dg.appendChild(svg("path", { d:"M20 9 L27 22 H22.5 V32 H17.5 V22 H13 Z", "class":"ar" })); ds.appendChild(dg);
+  dl.appendChild(ds); dl.appendChild(el("span", null, x.ws < 1 ? "無風" : fromWord(x.dir) + "の風"));
   if (rebuild) { buildMeteo(); $("nextbtn").textContent = "次の" + VNAME.go + "へ"; }
   drawCompass(x); drawTideNow(d);
   $("dprev").disabled = !viewDays[sel.di - 1]; $("dnext").disabled = !viewDays[sel.di + 1];
@@ -981,29 +995,64 @@ function sceneBlend(d, hf){
 }
 // 方位の輪: 茶色が陸、青が海。矢印は外から中心へ(風やうねりが来る向き)
 var viewTide = null;
+// 浜に立って海の方を向いたときの角度: 0=沖へ(前)、+90=右へ、-90=左へ、180=岸へ(手前)
+function relTo(toDeg){ return ((toDeg - place.b) % 360 + 540) % 360 - 180; }
+// 風・うねりが「どこから来るか」を、浜に立った人から見たことばで言う
+function fromWord(fromDeg){
+  var r = relTo(fromDeg), a = Math.abs(r), side = r > 0 ? "右" : "左";
+  if (a <= 30) return "正面(沖)から"; if (a <= 70) return side + "前から"; if (a < 110) return side + "から";
+  if (a < 150) return side + "後ろから"; return "背中(陸)から";
+}
 function drawCompass(x){
   var host = $("compass"), tx = $("cmptx"); host.textContent = ""; tx.textContent = "";
-  var s = svg("svg", { viewBox:"0 0 150 150", "class":"compass", role:"img", "aria-label":"風とうねりの向き" }), R = Math.PI / 180, c = 75, r = 52;
-  var pt = function(deg, rad){ return [c + rad * Math.sin(deg * R), c - rad * Math.cos(deg * R)]; };
-  s.appendChild(svg("circle", { cx:c, cy:c, r:r, "class":"csea" }));
-  var a0 = pt(place.b + 90, r), a1 = pt(place.b + 270, r);
-  s.appendChild(svg("path", { d:"M" + a0[0].toFixed(1) + " " + a0[1].toFixed(1) + " A" + r + " " + r + " 0 0 1 " + a1[0].toFixed(1) + " " + a1[1].toFixed(1) + " Z", "class":"cland" }));
-  s.appendChild(svg("circle", { cx:c, cy:c, r:r, "class":"cring" }));
-  [["北",0],["東",90],["南",180],["西",270]].forEach(function(q){ var p = pt(q[1], r + 13), t = svg("text", { x:p[0], y:p[1] + 4.5, "text-anchor":"middle", "class":"cn" }); t.textContent = q[0]; s.appendChild(t); });
-  var lp = pt(place.b + 180, r * 0.55), sp = pt(place.b, r * 0.55);
-  var t1 = svg("text", { x:lp[0], y:lp[1] + 4, "text-anchor":"middle", "class":"cl" }); t1.textContent = "陸"; s.appendChild(t1);
-  var t2 = svg("text", { x:sp[0], y:sp[1] + 4, "text-anchor":"middle", "class":"cl cs" }); t2.textContent = "海"; s.appendChild(t2);
-  var arrow = function(deg, cls, w, len){ var g = svg("g", { transform:"rotate(" + deg + " " + c + " " + c + ")", "class":cls }), y0 = c - r - 4, y1 = c - r - 4 + len;
-    g.appendChild(svg("path", { d:"M" + (c - w / 2) + " " + y0 + " H" + (c + w / 2) + " V" + (y1 - w * 1.1) + " H" + (c + w * 1.2) + " L" + c + " " + y1 + " L" + (c - w * 1.2) + " " + (y1 - w * 1.1) + " H" + (c - w / 2) + " Z" })); s.appendChild(g); };
-  if (x.sh >= 0.05) arrow(x.sd, "asw", 9, 30);
-  if (x.ws >= 1) arrow(x.dir, "awd" + (x.off ? " off" : ""), 6, 46);
+  var off = !!x.off, W = 160, H = 160, SH = 108, c = 80;
+  var s = svg("svg", { viewBox:"0 0 160 160", "class":"beach" + (off ? " off" : ""), role:"img", "aria-label":"浜辺から海を見た風とうねりの向き" });
+  var uid = "bc" + Math.random().toString(36).slice(2, 7), defs = svg("defs");
+  var cp = svg("clipPath", { id:uid + "a" }); cp.appendChild(svg("rect", { x:0, y:0, width:W, height:H, rx:10 })); defs.appendChild(cp);
+  var cs = svg("clipPath", { id:uid + "s" }); cs.appendChild(svg("rect", { x:0, y:0, width:W, height:SH + 4 })); defs.appendChild(cs);
+  s.appendChild(defs);
+  var root = svg("g", { "clip-path":"url(#" + uid + "a)" }); s.appendChild(root);
+  root.appendChild(svg("rect", { x:0, y:0, width:W, height:H, "class":"sea" }));
+  root.appendChild(svg("path", { d:"M0 " + SH + " Q40 " + (SH - 5) + " 80 " + SH + " T160 " + SH + " V160 H0 Z", "class":"land" }));
+  root.appendChild(svg("path", { d:"M0 " + SH + " Q40 " + (SH - 5) + " 80 " + SH + " T160 " + SH, "class":"shore" }));
+  // うねり: 波の山の線が、進む向きへ流れていく(海の上だけ)
+  if (x.sh >= 0.05) {
+    var gs = svg("g", { "clip-path":"url(#" + uid + "s)" }), rs = svg("g", { transform:"rotate(" + relTo(x.sd + 180) + " " + c + " " + c + ")" }), ms = svg("g", { "class":"mvs" });
+    ms.style.setProperty("--ds", Math.max(1.6, Math.min(5, x.sp * 0.35)).toFixed(1) + "s");
+    for (var k = -5; k <= 6; k += 1) { var y = c + k * 24; ms.appendChild(svg("path", { d:"M-60 " + y + " Q-30 " + (y - 5) + " 0 " + y + " T60 " + y + " T120 " + y + " T180 " + y + " T240 " + y, "class":"crest" })); }
+    rs.appendChild(ms); gs.appendChild(rs); root.appendChild(gs);
+  }
+  // 風: 流れる筋
+  if (x.ws >= 1) {
+    var rw = svg("g", { transform:"rotate(" + relTo(x.dir + 180) + " " + c + " " + c + ")" }), mw = svg("g", { "class":"mvw" });
+    mw.style.setProperty("--dw", Math.max(0.6, 3.2 - x.ws * 0.25).toFixed(2) + "s");
+    for (var i = -3; i <= 3; i++) for (var j = -3; j <= 4; j++) { var sx = c + i * 34 + (j % 2) * 17, sy = c + j * 40; mw.appendChild(svg("line", { x1:sx, y1:sy + 9, x2:sx, y2:sy - 9, "class":"streak" })); }
+    rw.appendChild(mw); root.appendChild(rw);
+  }
+  // 太い矢印: 向かう方へ。うねりはオレンジ、風は青(出し風は赤)
+  // 矢印ごとに置き場所を分け、しっぽ側に名前を付ける
+  var big = function(toDeg, cls, w, len, px, py, name){ var th = relTo(toDeg), R = Math.PI / 180, ux = Math.sin(th * R), uy = -Math.cos(th * R);
+    var g = svg("g", { transform:"rotate(" + th + " " + px + " " + py + ")", "class":cls }), y0 = py + len / 2, y1 = py - len / 2;
+    g.appendChild(svg("path", { d:"M" + (px - w / 2) + " " + y0 + " V" + (y1 + w * 1.3) + " H" + (px - w * 1.25) + " L" + px + " " + y1 + " L" + (px + w * 1.25) + " " + (y1 + w * 1.3) + " H" + (px + w / 2) + " V" + y0 + " Z" })); root.appendChild(g);
+    var lx = px - ux * (len / 2 + 9), ly = py - uy * (len / 2 + 9) + 4, tg = svg("text", { x:Math.max(16, Math.min(144, lx)).toFixed(1), y:Math.max(26, Math.min(150, ly)).toFixed(1), "text-anchor":"middle", "class":"lb tag " + cls }); tg.textContent = name; root.appendChild(tg); };
+  var both = x.sh >= 0.05 && x.ws >= 1;
+  if (x.sh >= 0.05) big(x.sd + 180, "bsw", 8, 56, both ? 110 : 80, 62, "うねり");
+  if (x.ws >= 1) big(x.dir + 180, "big", 9, 60, both ? 48 : 80, 64, "風");
+  // 目印: 沖・浜(あなた)・北
+  var t = function(xx, yy, str, cls){ var e = svg("text", { x:xx, y:yy, "text-anchor":"middle", "class":"lb" + (cls ? " " + cls : "") }); e.textContent = str; root.appendChild(e); return e; };
+  t(80, 14, "沖"); t(80, 153, "浜辺(あなた)", "m");
+  root.appendChild(svg("circle", { cx:80, cy:SH + 22, r:4, "class":"me" }));
+  var ng = svg("g", { transform:"translate(142 141)" }); ng.appendChild(svg("circle", { cx:0, cy:0, r:13, "class":"nring" }));
+  var na = svg("g", { transform:"rotate(" + (-place.b) + ")" }); na.appendChild(svg("path", { d:"M0 -10 L4 1 H-4 Z", "class":"nar" })); ng.appendChild(na);
+  var ntx = svg("text", { x:0, y:9, "text-anchor":"middle", "class":"nt" }); ntx.textContent = "北"; ng.appendChild(ntx); root.appendChild(ng);
   host.appendChild(s);
-  var along = windAlong(x.dir, place.b), rel = x.ws < 1 ? "" : along > 0.35 ? "(陸から沖へ)" : along < -0.35 ? "(海から岸へ)" : "(岸に沿う)";
-  var line = function(cls, label, text){ var p = el("p"); p.appendChild(el("i", "dot " + cls)); p.appendChild(el("b", null, label)); p.appendChild(document.createTextNode(text)); tx.appendChild(p); };
-  line("awd" + (x.off ? " off" : ""), "風", x.ws < 1 ? "ほぼ無風" : dirName(x.dir) + " " + x.ws.toFixed(1) + "m/s " + rel);
-  line("none", "突風", x.wg.toFixed(1) + "m/s");
-  line("asw", "うねり", x.sh >= 0.05 ? dirName(x.sd) + " " + x.sh.toFixed(1) + "m・間隔" + x.sp.toFixed(1) + "秒" : "ほぼなし");
-  line("none", "波", dirName(x.wd != null ? x.wd : x.sd) + " " + x.wh.toFixed(1) + "m・周期" + x.wp.toFixed(1) + "秒");
+  var line = function(cls, label, rel, text){ var p = el("p"); p.appendChild(el("i", "dot " + cls)); p.appendChild(el("b", null, label)); if (rel) p.appendChild(el("span", "rel", rel + " ")); p.appendChild(document.createTextNode(text)); tx.appendChild(p); };
+  if (x.ws < 1) line("awd", "風", "", "ほぼ無風");
+  else line("awd" + (off ? " off" : ""), "風", fromWord(x.dir) + "吹く", x.ws.toFixed(1) + "m/s(" + dirName(x.dir) + "の風)" + (off ? "。沖へ流されやすい" : ""));
+  line("none", "突風", "", x.wg.toFixed(1) + "m/s");
+  if (x.sh >= 0.05) line("asw", "うねり", fromWord(x.sd) + "寄せる", x.sh.toFixed(1) + "m・間隔" + x.sp.toFixed(1) + "秒");
+  else line("asw", "うねり", "", "ほぼなし");
+  line("none", "波", "", x.wh.toFixed(1) + "m・周期" + x.wp.toFixed(1) + "秒");
 }
 // 選んだ時刻の潮: 潮位・上げ下げ・その日のグラフ
 function drawTideNow(d){
@@ -1250,10 +1299,10 @@ window.addEventListener("resize", kick);
 document.addEventListener("visibilitychange", function(){ if (!document.hidden) kick(); });
 // 予報表(横スクロール): 列=時刻、行=判定・天気・気温・風・波・うねり・水温・潮
 var mgStep = +load("shukko:step", 3) === 1 ? 1 : 3, mgCols = [];
-function arrowSvg(deg, off){ var s = svg("svg", { viewBox:"0 0 20 20", "class":"arr" + (off ? " off" : "") }), g = svg("g", { transform:"rotate(" + ((deg + 180) % 360) + " 10 10)" }); g.appendChild(svg("path", { d:"M10 2 L15 10.5 H11.6 V18 H8.4 V10.5 H5 Z" })); s.appendChild(g); return s; }
+function arrowSvg(deg, off, cls){ var s = svg("svg", { viewBox:"0 0 20 20", "class":"arr" + (off ? " off" : "") + (cls ? " " + cls : "") }), g = svg("g", { transform:"rotate(" + relTo(deg + 180) + " 10 10)" }); g.appendChild(svg("path", { d:"M10 2 L15 10.5 H11.6 V18 H8.4 V10.5 H5 Z" })); s.appendChild(g); return s; }
 function buildMeteo(){
   var t = $("mg"), rows = {}; t.textContent = ""; mgCols = [];
-  [["day","日付"],["hr","時刻"],["v","判定"],["wx","天気"],["tp","気温"],["ws","風(突風)"],["wd","風向"],["wh","波"],["sh","うねり"],["sp","間隔"],["sst","水温"],["td","潮"]].forEach(function(q){
+  [["day","日付"],["hr","時刻"],["v","判定"],["wx","天気"],["tp","気温"],["ws","風(突風)"],["wd","風向 ↑沖へ"],["wh","波"],["sh","うねり"],["sd","うねり向"],["sp","間隔"],["sst","水温"],["td","潮"]].forEach(function(q){
     var tr = el("tr", "r-" + q[0]); tr.appendChild(el("th", null, q[1])); rows[q[0]] = tr; t.appendChild(tr); });
   viewDays.forEach(function(d, di){
     var L = dateLabel(d.ts), n = 0;
@@ -1269,7 +1318,7 @@ function buildMeteo(){
       add("ws", wbox, (x.ws > LIMITS.okWind || x.gust) ? "t-no" : x.ws > LIMITS.goWind ? "t-ok" : "");
       add("wd", x.ws < 1 ? "・" : arrowSvg(x.dir, x.off));
       add("wh", x.wh.toFixed(1), x.wh > LIMITS.okWave ? "t-no" : x.wh > LIMITS.goWave ? "t-ok" : "");
-      add("sh", x.sh.toFixed(1)); add("sp", x.sp.toFixed(1), x.swell ? "t-ok" : "");
+      add("sh", x.sh.toFixed(1)); add("sd", x.sh < 0.05 ? "・" : arrowSvg(x.sd, false, "sw")); add("sp", x.sp.toFixed(1), x.swell ? "t-ok" : "");
       add("sst", x.sst != null ? x.sst.toFixed(1) : null);
       add("td", "");
     }
