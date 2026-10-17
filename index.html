@@ -311,6 +311,8 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
 .bedit canvas{width:100%;border-radius:6px;border:1px solid var(--line);touch-action:manipulation}
 #bwork{background:repeating-conic-gradient(#cfd8da 0 25%,#f4f7f7 0 50%) 0 0/16px 16px}
 .bedit .tools{display:flex;gap:6px;flex-wrap:wrap}
+.tseg{display:grid !important;grid-template-columns:repeat(4,1fr)} .tseg button{padding:8px 2px !important}
+#bwork{touch-action:none}
 .bedit .tools button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .bedit label.rng{display:flex;align-items:center;gap:10px;font-weight:700;font-size:calc(14px*var(--fs))}
 .bedit label.rng input{flex:1}
@@ -448,11 +450,16 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
 <div class="sheet" id="bsheet" hidden>
   <div class="top"><h2 id="btitle">わたしのボート</h2><button class="textbtn" id="bcancel" type="button">やめる</button></div>
   <div class="bedit">
-    <p class="hint" id="bhint">背景は自動で消しています。消し残しは、その場所をタップすると消えます。消しすぎたら「やり直し」を押してください。</p>
-    <canvas id="bwork"></canvas>
+    <p class="hint" id="bhint">背景は自動で消しています。消し残しは、下の道具を選んで消してください。</p>
     <div id="bcutui" style="display:contents">
+    <div class="tools tseg" id="btools"><button type="button" data-tool="box" aria-pressed="true">囲む</button><button type="button" data-tool="tap" aria-pressed="false">タップで消す</button><button type="button" data-tool="erase" aria-pressed="false">なぞって消す</button><button type="button" data-tool="restore" aria-pressed="false">なぞって戻す</button></div>
+    <p class="hint" id="btoolhint"></p>
+    </div>
+    <canvas id="bwork"></canvas>
+    <div id="bcutui2" style="display:contents">
     <label class="rng">背景の消し具合<input type="range" id="btol" min="8" max="90" value="34"></label>
-    <div class="tools"><button type="button" id="bundo">やり直し</button><button type="button" id="bflip">左右を反転</button><button type="button" id="bkeep" aria-pressed="false">タップで残す</button></div>
+    <label class="rng" id="bbrushrow">なぞる太さ<input type="range" id="bbrush" min="1" max="8" value="3"></label>
+    <div class="tools"><button type="button" id="bundo">ひとつ戻す</button><button type="button" id="bflip">左右を反転</button><button type="button" id="ball">最初から</button></div>
     <p class="hint">向きはどちらでも大丈夫です。反転すると写っている文字も左右逆になります。</p>
     </div>
     <p class="hint" id="bpickui" hidden>選んだ色 <span class="sw" id="bpsw"></span></p>
@@ -1621,7 +1628,7 @@ function gearChips(){
 }
 var openEditor = null;
 (function(){
-  var W0 = 0, H0 = 0, src = null, mask = null, hist = [], flip = false, mode = "photo", keepMode = false, colr = "#D9463B", cut = null, slot = "boat";
+  var W0 = 0, H0 = 0, src = null, mask = null, hist = [], flip = false, mode = "photo", colr = "#D9463B", cut = null, slot = "boat", box = null, tool = "box", viewImg = null;
   var work = $("bwork"), wg = work.getContext("2d", { willReadFrequently: true });
   openEditor = function(k){ slot = k; $("bfile").value = ""; $("bfile").click(); };
   $("bshoot").addEventListener("click", function(){ openEditor("boat"); });
@@ -1629,8 +1636,8 @@ var openEditor = null;
   function setupUI(){
     var G = gdef(), pick = !!(G && G.pick);
     $("btitle").textContent = G ? "わたしの" + G.name.replace("の色", "") : "わたしのボート";
-    $("bhint").textContent = pick ? G.hint : "背景は自動で消しています。消し残しは、その場所をタップすると消えます。消しすぎたら「やり直し」を押してください。";
-    $("bcutui").style.display = pick ? "none" : "contents"; $("bpickui").hidden = !pick; $("bmodeui").hidden = !!G;
+    $("bhint").textContent = pick ? G.hint : "背景は自動で消しています。消し残しは、下の道具を選んで消してください。";
+    $("bcutui").style.display = $("bcutui2").style.display = pick ? "none" : "contents"; $("bpickui").hidden = !pick; $("bmodeui").hidden = !!G;
     if (G) mode = pick ? "color" : "photo";
     else { mode = "photo"; Array.prototype.forEach.call(document.querySelectorAll("[data-bm]"), function(o){ o.setAttribute("aria-pressed", String(o.dataset.bm === "photo")); }); }
   }
@@ -1642,7 +1649,7 @@ var openEditor = null;
     im.onload = function(){
       var sc = Math.min(1, 480 / Math.max(im.width, im.height)); W0 = Math.round(im.width * sc); H0 = Math.round(im.height * sc);
       work.width = W0; work.height = H0; wg.clearRect(0, 0, W0, H0); wg.drawImage(im, 0, 0, W0, H0); URL.revokeObjectURL(url);
-      src = wg.getImageData(0, 0, W0, H0); flip = false; hist = []; keepMode = false; $("bkeep").setAttribute("aria-pressed", "false");
+      src = wg.getImageData(0, 0, W0, H0); flip = false; hist = []; box = null; setTool("box");
       setupUI();
       if (gdef() && gdef().pick) { mask = null; colr = gear[slot] || (slot === "rod" ? "#22313A" : "#F08A24"); $("bpsw").style.background = colr; $("bsave").disabled = false; preview(); }
       else autoMask();
@@ -1659,12 +1666,13 @@ var openEditor = null;
     for (x = 0; x < W0; x += 2) { seeds.push(x); seeds.push((H0 - 1) * W0 + x); }
     for (y = 0; y < H0; y += 2) { seeds.push(y * W0); seeds.push(y * W0 + W0 - 1); }
     flood(seeds, tol, 0);
+    if (box) for (y = 0; y < H0; y++) for (x = 0; x < W0; x++) if (x < box.x0 || x > box.x1 || y < box.y0 || y > box.y1) mask[y * W0 + x] = 0;   // 囲みの外は全部消す
     hist = []; finish();
   }
   // 種から始めて、隣と色が近く、かつ種の色にも近い画素を val にする
   function flood(seeds, tol, val){
     var d = src.data, q = new Int32Array(W0 * H0), seen = new Uint8Array(W0 * H0), qh = 0, qt = 0;
-    seeds.forEach(function(p){ if (!seen[p] && mask[p] !== val) { seen[p] = 1; q[qt++] = p; } });
+    seeds.forEach(function(p){ if (!seen[p]) { seen[p] = 1; q[qt++] = p; } });
     var ref = {}; seeds.forEach(function(p){ ref[p] = p; });
     var org = new Int32Array(W0 * H0); seeds.forEach(function(p){ org[p] = p; });
     while (qh < qt) {
@@ -1680,19 +1688,52 @@ var openEditor = null;
       for (var yy = py - 2; yy <= py + 2; yy++) for (var xq = px - 2; xq <= px + 2; xq++) if (xq >= 0 && yy >= 0 && xq < W0 && yy < H0) { var j = (yy * W0 + xq) * 4; tr += src.data[j]; tg += src.data[j + 1]; tb += src.data[j + 2]; n++; }
       if (n) { colr = "#" + ((1 << 24) + (Math.round(tr / n) << 16) + (Math.round(tg / n) << 8) + Math.round(tb / n)).toString(16).slice(1); $("bpsw").style.background = colr; preview(); }
       return; }
-    if (!mask) return; var rc = work.getBoundingClientRect();
-    var x = Math.floor((ev.clientX - rc.left) / rc.width * W0), y = Math.floor((ev.clientY - rc.top) / rc.height * H0); if (flip) x = W0 - 1 - x;
-    if (x < 0 || y < 0 || x >= W0 || y >= H0) return;
-    hist.push(mask.slice()); if (hist.length > 15) hist.shift();
-    flood([y * W0 + x], +$("btol").value, keepMode ? 1 : 0); finish();
   });
+  // 写真の上の指の位置 → 元の写真の座標(反転していれば戻す)
+  function toSrc(ev){ var rc = work.getBoundingClientRect(), x = (ev.clientX - rc.left) / rc.width * W0, y = (ev.clientY - rc.top) / rc.height * H0;
+    return { vx: x, vy: y, x: Math.max(0, Math.min(W0 - 1, Math.round(flip ? W0 - 1 - x : x))), y: Math.max(0, Math.min(H0 - 1, Math.round(y))) }; }
+  var TOOLHINT = { box: "ボートを指でなぞるように、四角く囲んでください。囲みの外は全部消えます。",
+    tap: "消し残しの所をタップすると、似た色のつながった部分が消えます。",
+    erase: "消したい所を指でなぞると消えます。ボートにくっついた岩や堤防に。",
+    restore: "消えてしまったボートの部分を指でなぞると元に戻ります。" };
+  function setTool(t){ tool = t; Array.prototype.forEach.call($("btools").children, function(b){ b.setAttribute("aria-pressed", String(b.dataset.tool === t)); }); $("btoolhint").textContent = TOOLHINT[t]; $("bbrushrow").hidden = !(t === "erase" || t === "restore"); }
+  Array.prototype.forEach.call($("btools").children, function(b){ b.addEventListener("click", function(){ setTool(b.dataset.tool); }); });
+  function brushR(){ return Math.max(3, Math.round(Math.max(W0, H0) * 0.008 * +$("bbrush").value)); }
+  function stamp(a, b, val){ var r = brushR(), len = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)), st = Math.max(1, r / 2);
+    for (var t = 0; t <= len; t += st) { var cxp = Math.round(a.x + (b.x - a.x) * t / len), cyp = Math.round(a.y + (b.y - a.y) * t / len);
+      for (var yy = Math.max(0, cyp - r); yy <= Math.min(H0 - 1, cyp + r); yy++) for (var xx = Math.max(0, cxp - r); xx <= Math.min(W0 - 1, cxp + r); xx++)
+        if ((xx - cxp) * (xx - cxp) + (yy - cyp) * (yy - cyp) <= r * r) mask[yy * W0 + xx] = val; } }
+  var drag = null, rafF = 0;
+  function liveFinish(){ if (rafF) return; rafF = requestAnimationFrame(function(){ rafF = 0; finish(true); }); }
+  work.addEventListener("pointerdown", function(ev){
+    if (!mask || (gdef() && gdef().pick)) return; ev.preventDefault(); work.setPointerCapture(ev.pointerId);
+    var p = toSrc(ev); drag = { s: p, last: p, moved: false };
+    if (tool === "erase" || tool === "restore") { hist.push(mask.slice()); if (hist.length > 15) hist.shift(); stamp(p, p, tool === "erase" ? 0 : 1); liveFinish(); }
+  });
+  work.addEventListener("pointermove", function(ev){
+    if (!drag) return; var p = toSrc(ev); if (Math.hypot(p.vx - drag.s.vx, p.vy - drag.s.vy) > 4) drag.moved = true;
+    if (tool === "box") { if (viewImg) wg.putImageData(viewImg, 0, 0); wg.save(); wg.strokeStyle = "#FF3B30"; wg.lineWidth = Math.max(2, W0 / 160); wg.setLineDash([8, 6]);
+      wg.strokeRect(Math.min(drag.s.vx, p.vx), Math.min(drag.s.vy, p.vy), Math.abs(p.vx - drag.s.vx), Math.abs(p.vy - drag.s.vy)); wg.restore(); }
+    else if (tool === "erase" || tool === "restore") { stamp(drag.last, p, tool === "erase" ? 0 : 1); liveFinish(); }
+    drag.last = p;
+  });
+  function endDrag(ev){
+    if (!drag) return; var d0 = drag, p = toSrc(ev); drag = null;
+    if (tool === "box") {
+      var x0 = Math.min(d0.s.x, p.x), x1 = Math.max(d0.s.x, p.x), y0 = Math.min(d0.s.y, p.y), y1 = Math.max(d0.s.y, p.y);
+      if (x1 - x0 > 12 && y1 - y0 > 8) { box = { x0: x0, y0: y0, x1: x1, y1: y1 }; autoMask(); } else finish();
+    } else if (tool === "tap") {
+      if (!d0.moved) { hist.push(mask.slice()); if (hist.length > 15) hist.shift(); flood([p.y * W0 + p.x], +$("btol").value, 0); finish(); }
+    } else finish();
+  }
+  work.addEventListener("pointerup", endDrag); work.addEventListener("pointercancel", function(){ drag = null; finish(); });
   $("btol").addEventListener("change", autoMask);
   $("bundo").addEventListener("click", function(){ if (hist.length) { mask = hist.pop(); finish(); } else autoMask(); });
   $("bflip").addEventListener("click", function(){ flip = !flip; finish(); });
-  $("bkeep").addEventListener("click", function(){ keepMode = !keepMode; this.setAttribute("aria-pressed", String(keepMode)); });
+  $("ball").addEventListener("click", function(){ box = null; $("btol").value = 34; autoMask(); });
   Array.prototype.forEach.call(document.querySelectorAll("[data-bm]"), function(b){ b.addEventListener("click", function(){ mode = b.dataset.bm; Array.prototype.forEach.call(document.querySelectorAll("[data-bm]"), function(o){ o.setAttribute("aria-pressed", String(o === b)); }); preview(); }); });
   // 残った部分の中で一番大きなかたまりだけを残し、切り抜いて、主な色を拾う
-  function finish(){
+  function finish(live){
     var n = W0 * H0, lab = new Int32Array(n), best = 0, bestN = 0, id = 0, q = new Int32Array(n);
     for (var p0 = 0; p0 < n; p0++) if (mask[p0] && !lab[p0]) { id++; var qh = 0, qt = 0, cnt = 0; q[qt++] = p0; lab[p0] = id;
       while (qh < qt) { var p = q[qh++], x = p % W0; cnt++; [x > 0 ? p - 1 : -1, x < W0 - 1 ? p + 1 : -1, p - W0, p + W0].forEach(function(r){ if (r >= 0 && r < n && mask[r] && !lab[r]) { lab[r] = id; q[qt++] = r; } }); }
@@ -1710,7 +1751,7 @@ var openEditor = null;
     // 作業用: 消した所は薄く表示
     var view = wg.createImageData(W0, H0), v = view.data;
     for (p = 0; p < n; p++) { var sx2 = flip ? (W0 - 1 - p % W0) : p % W0, t2 = (((p / W0) | 0) * W0 + sx2) * 4; v[t2] = d[p * 4]; v[t2 + 1] = d[p * 4 + 1]; v[t2 + 2] = d[p * 4 + 2]; v[t2 + 3] = o[t2 + 3] ? 255 : 40; }
-    wg.putImageData(view, 0, 0);
+    wg.putImageData(view, 0, 0); viewImg = view;
     var bb = 0, bi = -1; for (i = 0; i < 36; i++) { var sc = hb[i] + (hb[(i + 1) % 36] + hb[(i + 35) % 36]) * 0.5; if (sc > bb) { bb = sc; bi = i; } }
     colr = pickColor(hc, hb, bb > bestN * 0.02 ? bi : -1);
     $("bsw").style.background = colr;
