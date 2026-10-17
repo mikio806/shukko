@@ -287,6 +287,23 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
 .mitem{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-size:calc(15px*var(--fs));font-weight:700}
 .mitem small{display:block;font-weight:400;color:var(--muted);font-size:calc(12px*var(--fs))}
 .hint{font-size:calc(13px*var(--fs));color:var(--muted);margin:0}
+/* わたしのボート */
+.myboat{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.myboat .thumb{width:96px;height:56px;border-radius:6px;border:1px solid var(--line);background:linear-gradient(#bfe0f2 55%,#2f7fa6 55%);background-size:cover}
+.myboat .btns{display:flex;gap:6px;flex-wrap:wrap;flex:1 1 100%}.myboat .btns button{flex:1}
+.myboat .btns button,.bedit .tools button{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-weight:700;min-height:44px;font-size:calc(14px*var(--fs))}
+.myboat .btns button.main{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.bedit{flex:1;min-height:0;overflow-y:auto;padding:10px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px}
+.bedit canvas{width:100%;border-radius:6px;border:1px solid var(--line);touch-action:manipulation}
+#bwork{background:repeating-conic-gradient(#cfd8da 0 25%,#f4f7f7 0 50%) 0 0/16px 16px}
+.bedit .tools{display:flex;gap:6px;flex-wrap:wrap}
+.bedit .tools button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.bedit label.rng{display:flex;align-items:center;gap:10px;font-weight:700;font-size:calc(14px*var(--fs))}
+.bedit label.rng input{flex:1}
+.bedit .mode{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.bedit .mode button{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 4px;font-weight:700;font-size:calc(14px*var(--fs))}
+.bedit .mode button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.bedit .sw{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);display:inline-block;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -344,6 +361,10 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
     <h2>表示の設定</h2>
     <div class="setrow"><span>文字の大きさ</span>
       <div class="sizes" id="sizes"><button type="button" data-fs="1">標準</button><button type="button" data-fs="1.25">大</button><button type="button" data-fs="1.5">特大</button></div></div>
+    <div class="setrow myboat"><span>わたしのボート</span><canvas class="thumb" id="bthumb" width="192" height="112"></canvas>
+      <div class="btns"><button type="button" class="main" id="bshoot">ボートを撮る・選ぶ</button><button type="button" id="breset" hidden>元の赤いボートに戻す</button></div>
+      <input type="file" id="bfile" accept="image/*" hidden></div>
+    <p>ボートを真横から撮ると、上のアニメーションに自分のボートが出ます。背景が空や海だけになるように撮ると、きれいに切り抜けます。</p>
     <h2>この地点の設定</h2>
     <div class="setrow"><label for="bearing">海の方角(岸から見て海がある向き)</label>
       <select id="bearing"></select></div>
@@ -401,6 +422,20 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
         <select id="pinbearing" aria-label="海の方角"></select></div>
       <button class="primary" id="usepin" type="button" disabled>地図をタップして場所を選ぶ</button>
     </div>
+  </div>
+</div>
+
+<div class="sheet" id="bsheet" hidden>
+  <div class="top"><h2>わたしのボート</h2><button class="textbtn" id="bcancel" type="button">やめる</button></div>
+  <div class="bedit">
+    <p class="hint">背景は自動で消しています。消し残しは、その場所をタップすると消えます。消しすぎたら「やり直し」を押してください。</p>
+    <canvas id="bwork"></canvas>
+    <label class="rng">背景の消し具合<input type="range" id="btol" min="8" max="90" value="34"></label>
+    <div class="tools"><button type="button" id="bundo">やり直し</button><button type="button" id="bflip">左右を反転</button><button type="button" id="bkeep" aria-pressed="false">タップで残す</button></div>
+    <p class="hint">向きはどちらでも大丈夫です。反転すると船の文字も左右逆になります。</p>
+    <div class="mode"><button type="button" data-bm="photo" aria-pressed="true">写真のまま使う</button><button type="button" data-bm="color" aria-pressed="false">色だけ使う <span class="sw" id="bsw"></span></button></div>
+    <canvas id="bprev" width="640" height="260"></canvas>
+    <button class="primary" id="bsave" type="button">このボートにする</button>
   </div>
 </div>
 
@@ -1019,7 +1054,8 @@ function waveLayer(W, H, base, off, amp, col, sp, edge, foam){
 }
 // ミキオさんの船: 赤いゴムボート(白い帯・船尾にグレーの斜め線)、銀色の船外機、白いシートとクーラー、魚探、竿
 function drawBoat(bx, by, ang, s, dim, ashore){
-  var R = "#D9463B", RD = "#B8352C", WH = "#F4F6F5", GY = "#B9BEC2", DK = "#22313A";
+  if (myBoat.img && myBoat.mode === "photo") { drawPhotoBoat(cx, myBoat.img, bx, by, ang, s, dim); return; }
+  var R = myBoat.col || "#D9463B", RD = myBoat.dk || "#B8352C", WH = "#F4F6F5", GY = "#B9BEC2", DK = "#22313A";
   function rr(x, y, w, h, r, c){ cx.fillStyle = c; cx.beginPath(); cx.moveTo(x + r, y); cx.lineTo(x + w - r, y); cx.quadraticCurveTo(x + w, y, x + w, y + r); cx.lineTo(x + w, y + h - r); cx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); cx.lineTo(x + r, y + h); cx.quadraticCurveTo(x, y + h, x, y + h - r); cx.lineTo(x, y + r); cx.quadraticCurveTo(x, y, x + r, y); cx.closePath(); cx.fill(); }
   function ln(x1, y1, x2, y2, w, c){ cx.strokeStyle = c; cx.lineWidth = w; cx.lineCap = "round"; cx.beginPath(); cx.moveTo(x1, y1); cx.lineTo(x2, y2); cx.stroke(); }
   cx.save(); cx.translate(bx, by); cx.rotate(ang); cx.scale(s * 1.25, s * 1.25); cx.globalAlpha = dim;
@@ -1467,6 +1503,145 @@ setSize(load("shukko:fs", 1.25));
 
 function syncBarH(){ document.documentElement.style.setProperty("--barh", document.querySelector(".bar").offsetHeight + "px"); }
 window.addEventListener("resize", syncBarH); syncBarH();
+
+
+/* ---------- わたしのボート(カメラで撮ったボート) ---------- */
+var myBoat = { mode: null, img: null, col: null, dk: null };
+// 写真のボート: 長さ約70(絵のボートと同じ)、喫水線を少し沈めて描く
+function drawPhotoBoat(g, img, bx, by, ang, s, dim){
+  var k = s * 1.25, w = 74, h = w * img.height / img.width; if (h > 60) { h = 60; w = h * img.width / img.height; }
+  var sink = Math.min(6, h * 0.16);
+  g.save(); g.translate(bx, by); g.rotate(ang); g.scale(k, k); g.globalAlpha = dim;
+  g.drawImage(img, -w / 2, sink - h, w, h);
+  var gr = g.createLinearGradient(0, sink - 3, 0, sink + 1);          // 水に浸かった所をなじませる
+  gr.addColorStop(0, "rgba(30,90,120,0)"); gr.addColorStop(1, "rgba(30,90,120,.55)");
+  g.globalCompositeOperation = "source-atop"; g.fillStyle = gr; g.fillRect(-w / 2, sink - 3, w, 4);
+  g.restore();
+}
+function shade(hex, f){ var n = parseInt(hex.slice(1), 16), r = n >> 16, gg = (n >> 8) & 255, b = n & 255; function c(v){ return Math.max(0, Math.min(255, Math.round(v * f))); } return "#" + ((1 << 24) + (c(r) << 16) + (c(gg) << 8) + c(b)).toString(16).slice(1); }
+function loadMyBoat(){
+  var s = load("shukko:myboat", null); myBoat = { mode: null, img: null, col: null, dk: null };
+  if (s && s.col) { myBoat.col = s.col; myBoat.dk = shade(s.col, 0.82); }
+  if (s && s.mode === "photo" && s.src) { var im = new Image(); im.onload = function(){ myBoat.img = im; myBoat.mode = "photo"; boatThumb(); if (typeof viewDays !== "undefined" && viewDays.length) drawSea(true); }; im.src = s.src; }
+  else if (s) myBoat.mode = "color";
+  boatThumb();
+}
+function boatThumb(){
+  var c = $("bthumb"), g = c.getContext("2d"); g.clearRect(0, 0, c.width, c.height);
+  $("breset").hidden = !myBoat.mode;
+  var keep = cx; cx = g; try { drawBoat(96, 82, 0, 1.15, 1, false); } finally { cx = keep; }
+}
+(function(){
+  var W0 = 0, H0 = 0, src = null, mask = null, hist = [], flip = false, mode = "photo", keepMode = false, colr = "#D9463B", cut = null;
+  var work = $("bwork"), wg = work.getContext("2d", { willReadFrequently: true });
+  $("bshoot").addEventListener("click", function(){ $("bfile").value = ""; $("bfile").click(); });
+  $("breset").addEventListener("click", function(){ try { localStorage.removeItem("shukko:myboat"); } catch (e) {} loadMyBoat(); if (viewDays.length) drawSea(true); });
+  $("bcancel").addEventListener("click", function(){ $("bsheet").hidden = true; });
+  $("bfile").addEventListener("change", function(){
+    var f = this.files && this.files[0]; if (!f) return;
+    var url = URL.createObjectURL(f), im = new Image();
+    im.onload = function(){
+      var sc = Math.min(1, 480 / Math.max(im.width, im.height)); W0 = Math.round(im.width * sc); H0 = Math.round(im.height * sc);
+      work.width = W0; work.height = H0; wg.clearRect(0, 0, W0, H0); wg.drawImage(im, 0, 0, W0, H0); URL.revokeObjectURL(url);
+      src = wg.getImageData(0, 0, W0, H0); flip = false; hist = []; keepMode = false; $("bkeep").setAttribute("aria-pressed", "false");
+      autoMask(); $("bsheet").hidden = false; work.scrollIntoView({ block: "nearest" });
+    };
+    im.onerror = function(){ URL.revokeObjectURL(url); alert("写真を読み込めませんでした。別の写真で試してください。"); };
+    im.src = url;
+  });
+  function dist(i, r, g, b){ var d = src.data, dr = d[i] - r, dg = d[i + 1] - g, db = d[i + 2] - b; return Math.sqrt(dr * dr * 0.3 + dg * dg * 0.59 + db * db * 0.11) ; }
+  // 写真の縁から、縁と似た色でつながっている所を背景として消す
+  function autoMask(){
+    var tol = +$("btol").value, d = src.data, n = W0 * H0; mask = new Uint8Array(n).fill(1);
+    var seeds = [], x, y;
+    for (x = 0; x < W0; x += 2) { seeds.push(x); seeds.push((H0 - 1) * W0 + x); }
+    for (y = 0; y < H0; y += 2) { seeds.push(y * W0); seeds.push(y * W0 + W0 - 1); }
+    flood(seeds, tol, 0);
+    hist = []; finish();
+  }
+  // 種から始めて、隣と色が近く、かつ種の色にも近い画素を val にする
+  function flood(seeds, tol, val){
+    var d = src.data, q = new Int32Array(W0 * H0), seen = new Uint8Array(W0 * H0), qh = 0, qt = 0;
+    seeds.forEach(function(p){ if (!seen[p] && mask[p] !== val) { seen[p] = 1; q[qt++] = p; } });
+    var ref = {}; seeds.forEach(function(p){ ref[p] = p; });
+    var org = new Int32Array(W0 * H0); seeds.forEach(function(p){ org[p] = p; });
+    while (qh < qt) {
+      var p = q[qh++], i = p * 4, o = org[p] * 4; mask[p] = val;
+      var x = p % W0, nb = [x > 0 ? p - 1 : -1, x < W0 - 1 ? p + 1 : -1, p - W0, p + W0];
+      for (var k = 0; k < 4; k++) { var r = nb[k]; if (r < 0 || r >= W0 * H0 || seen[r]) continue;
+        if (dist(r * 4, d[i], d[i + 1], d[i + 2]) < tol * 0.55 && dist(r * 4, d[o], d[o + 1], d[o + 2]) < tol * 1.6) { seen[r] = 1; org[r] = org[p]; q[qt++] = r; } }
+    }
+  }
+  work.addEventListener("click", function(ev){
+    if (!mask) return; var rc = work.getBoundingClientRect();
+    var x = Math.floor((ev.clientX - rc.left) / rc.width * W0), y = Math.floor((ev.clientY - rc.top) / rc.height * H0); if (flip) x = W0 - 1 - x;
+    if (x < 0 || y < 0 || x >= W0 || y >= H0) return;
+    hist.push(mask.slice()); if (hist.length > 15) hist.shift();
+    flood([y * W0 + x], +$("btol").value, keepMode ? 1 : 0); finish();
+  });
+  $("btol").addEventListener("change", autoMask);
+  $("bundo").addEventListener("click", function(){ if (hist.length) { mask = hist.pop(); finish(); } else autoMask(); });
+  $("bflip").addEventListener("click", function(){ flip = !flip; finish(); });
+  $("bkeep").addEventListener("click", function(){ keepMode = !keepMode; this.setAttribute("aria-pressed", String(keepMode)); });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-bm]"), function(b){ b.addEventListener("click", function(){ mode = b.dataset.bm; Array.prototype.forEach.call(document.querySelectorAll("[data-bm]"), function(o){ o.setAttribute("aria-pressed", String(o === b)); }); preview(); }); });
+  // 残った部分の中で一番大きなかたまりだけを残し、切り抜いて、主な色を拾う
+  function finish(){
+    var n = W0 * H0, lab = new Int32Array(n), best = 0, bestN = 0, id = 0, q = new Int32Array(n);
+    for (var p0 = 0; p0 < n; p0++) if (mask[p0] && !lab[p0]) { id++; var qh = 0, qt = 0, cnt = 0; q[qt++] = p0; lab[p0] = id;
+      while (qh < qt) { var p = q[qh++], x = p % W0; cnt++; [x > 0 ? p - 1 : -1, x < W0 - 1 ? p + 1 : -1, p - W0, p + W0].forEach(function(r){ if (r >= 0 && r < n && mask[r] && !lab[r]) { lab[r] = id; q[qt++] = r; } }); }
+      if (cnt > bestN) { bestN = cnt; best = id; } }
+    var x0 = W0, y0 = H0, x1 = -1, y1 = -1, out = wg.createImageData(W0, H0), d = src.data, o = out.data, hb = new Float64Array(36), hc = [];
+    for (var i = 0; i < 36; i++) hc.push([0, 0, 0]);
+    for (p = 0; p < n; p++) { var on = best && lab[p] === best, sx = flip ? (W0 - 1 - p % W0) : p % W0, sy = (p / W0) | 0, t = (sy * W0 + sx) * 4;
+      o[t] = d[p * 4]; o[t + 1] = d[p * 4 + 1]; o[t + 2] = d[p * 4 + 2]; o[t + 3] = on ? 255 : 0;
+      if (on) { if (sx < x0) x0 = sx; if (sx > x1) x1 = sx; if (sy < y0) y0 = sy; if (sy > y1) y1 = sy;
+        var r = d[p * 4] / 255, g2 = d[p * 4 + 1] / 255, b = d[p * 4 + 2] / 255, mx = Math.max(r, g2, b), mn = Math.min(r, g2, b), sat = mx ? (mx - mn) / mx : 0;
+        if (sat > 0.35 && mx > 0.25) { var h = mx === r ? ((g2 - b) / (mx - mn) + 6) % 6 : mx === g2 ? (b - r) / (mx - mn) + 2 : (r - g2) / (mx - mn) + 4, bin = Math.floor(h * 6) % 36;
+          hb[bin] += sat * mx; hc[bin][0] += d[p * 4]; hc[bin][1] += d[p * 4 + 1]; hc[bin][2] += d[p * 4 + 2]; } } }
+    // 縁を1画素ぼかしてギザギザを抑える
+    for (var y = 1; y < H0 - 1; y++) for (var xx = 1; xx < W0 - 1; xx++) { var j = (y * W0 + xx) * 4; if (o[j + 3] && (!o[j - 1] || !o[j + 7] || !o[j - W0 * 4 + 3] || !o[j + W0 * 4 + 3])) o[j + 3] = 150; }
+    // 作業用: 消した所は薄く表示
+    var view = wg.createImageData(W0, H0), v = view.data;
+    for (p = 0; p < n; p++) { var sx2 = flip ? (W0 - 1 - p % W0) : p % W0, t2 = (((p / W0) | 0) * W0 + sx2) * 4; v[t2] = d[p * 4]; v[t2 + 1] = d[p * 4 + 1]; v[t2 + 2] = d[p * 4 + 2]; v[t2 + 3] = o[t2 + 3] ? 255 : 40; }
+    wg.putImageData(view, 0, 0);
+    var bb = 0, bi = -1; for (i = 0; i < 36; i++) { var sc = hb[i] + (hb[(i + 1) % 36] + hb[(i + 35) % 36]) * 0.5; if (sc > bb) { bb = sc; bi = i; } }
+    colr = pickColor(hc, hb, bb > bestN * 0.02 ? bi : -1);
+    $("bsw").style.background = colr;
+    cut = null;
+    if (x1 > x0 + 10 && y1 > y0 + 6) { cut = document.createElement("canvas"); cut.width = x1 - x0 + 1; cut.height = y1 - y0 + 1; var cc = cut.getContext("2d"), tmp = document.createElement("canvas"); tmp.width = W0; tmp.height = H0; tmp.getContext("2d").putImageData(out, 0, 0); cc.drawImage(tmp, -x0, -y0); }
+    $("bsave").disabled = mode === "photo" && !cut;
+    preview();
+  }
+  function pickColor(hc, hb, bi){
+    if (bi < 0) return "#D9463B";
+    var tr = 0, tg = 0, tb = 0, cnt = 0;
+    // 色の合計は画素数で割るため、ビンごとの画素数を数え直す
+    var d = src.data; for (var p = 0; p < W0 * H0; p++) { if (!mask[p]) continue; var r = d[p * 4] / 255, g = d[p * 4 + 1] / 255, b = d[p * 4 + 2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b); if (!mx || (mx - mn) / mx <= 0.35 || mx <= 0.25) continue;
+      var h = mx === r ? ((g - b) / (mx - mn) + 6) % 6 : mx === g ? (b - r) / (mx - mn) + 2 : (r - g) / (mx - mn) + 4, bin = Math.floor(h * 6) % 36, dd = Math.min(Math.abs(bin - bi), 36 - Math.abs(bin - bi));
+      if (dd <= 1) { tr += d[p * 4]; tg += d[p * 4 + 1]; tb += d[p * 4 + 2]; cnt++; } }
+    if (!cnt) return "#D9463B";
+    return "#" + ((1 << 24) + (Math.round(tr / cnt) << 16) + (Math.round(tg / cnt) << 8) + Math.round(tb / cnt)).toString(16).slice(1);
+  }
+  function preview(){
+    var c = $("bprev"), g = c.getContext("2d"), W = c.width, H = c.height, hor = H * 0.62;
+    var sky = g.createLinearGradient(0, 0, 0, hor); sky.addColorStop(0, "#9ccbe6"); sky.addColorStop(1, "#d9eef6"); g.fillStyle = sky; g.fillRect(0, 0, W, hor);
+    g.fillStyle = "#2f7fa6"; g.fillRect(0, hor, W, H - hor);
+    var save1 = { m: myBoat.mode, i: myBoat.img, c: myBoat.col, d: myBoat.dk }, keep = cx;
+    if (mode === "photo") { myBoat.mode = "photo"; myBoat.img = cut; } else { myBoat.mode = "color"; myBoat.img = null; myBoat.col = colr; myBoat.dk = shade(colr, 0.82); }
+    cx = g; try { if (mode === "photo" && !cut) { g.fillStyle = "#fff"; g.font = "bold 22px sans-serif"; g.textAlign = "center"; g.fillText("ボートが見つかりません。消し具合を下げてください", W / 2, hor - 30); } else drawBoat(W / 2, hor + 6, 0, 2.6, 1, false); }
+    finally { cx = keep; myBoat.mode = save1.m; myBoat.img = save1.i; myBoat.col = save1.c; myBoat.dk = save1.d; }
+    g.fillStyle = "rgba(47,127,166,.55)"; g.fillRect(0, hor + 8, W, H);
+    $("bsave").disabled = mode === "photo" && !cut;
+  }
+  $("bsave").addEventListener("click", function(){
+    var rec = { mode: mode, col: colr };
+    if (mode === "photo") { var k = Math.min(1, 360 / cut.width), t = document.createElement("canvas"); t.width = Math.round(cut.width * k); t.height = Math.round(cut.height * k); t.getContext("2d").drawImage(cut, 0, 0, t.width, t.height); rec.src = t.toDataURL("image/png"); }
+    save("shukko:myboat", rec);
+    if (!load("shukko:myboat", null)) { alert("保存できませんでした。写真を小さめに撮り直してください。"); return; }
+    $("bsheet").hidden = true; loadMyBoat(); if (viewDays.length) drawSea(true);
+  });
+})();
+loadMyBoat();
 
 /* ---------- 起動 ---------- */
 show(place, false);
