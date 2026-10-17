@@ -303,6 +303,10 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
 .bedit .mode{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .bedit .mode button{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 4px;font-weight:700;font-size:calc(14px*var(--fs))}
 .bedit .mode button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.gears{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;flex:1 1 100%}
+.gear{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 4px;font-weight:700;font-size:calc(13px*var(--fs));min-height:44px}
+.gear canvas{width:56px;height:40px}
+.gear .x{position:absolute;top:2px;right:2px;width:28px;height:28px;border-radius:50%;border:0;background:var(--surface);color:var(--no);font-weight:800;line-height:1}
 .bedit .sw{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);display:inline-block;vertical-align:middle}
 </style>
 </head>
@@ -365,6 +369,8 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
       <div class="btns"><button type="button" class="main" id="bshoot">ボートを撮る・選ぶ</button><button type="button" id="breset" hidden>元の赤いボートに戻す</button></div>
       <input type="file" id="bfile" accept="image/*" hidden></div>
     <p>ボートを真横から撮ると、上のアニメーションに自分のボートが出ます。背景が空や海だけになるように撮ると、きれいに切り抜けます。</p>
+    <div class="setrow myboat"><span>わたしの釣り道具(磯・漁港)</span><div class="gears" id="gears"></div></div>
+    <p>磯・漁港を選んだときに、岸の釣り人のそばに並びます。竿とライフジャケットは、写真の中でその物をタップすると色が変わります。バッカン・タモ・クーラーは、ひとつずつ写真を撮ると切り抜いて置きます。</p>
     <h2>この地点の設定</h2>
     <div class="setrow"><label for="bearing">海の方角(岸から見て海がある向き)</label>
       <select id="bearing"></select></div>
@@ -426,16 +432,19 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--line);b
 </div>
 
 <div class="sheet" id="bsheet" hidden>
-  <div class="top"><h2>わたしのボート</h2><button class="textbtn" id="bcancel" type="button">やめる</button></div>
+  <div class="top"><h2 id="btitle">わたしのボート</h2><button class="textbtn" id="bcancel" type="button">やめる</button></div>
   <div class="bedit">
-    <p class="hint">背景は自動で消しています。消し残しは、その場所をタップすると消えます。消しすぎたら「やり直し」を押してください。</p>
+    <p class="hint" id="bhint">背景は自動で消しています。消し残しは、その場所をタップすると消えます。消しすぎたら「やり直し」を押してください。</p>
     <canvas id="bwork"></canvas>
+    <div id="bcutui" style="display:contents">
     <label class="rng">背景の消し具合<input type="range" id="btol" min="8" max="90" value="34"></label>
     <div class="tools"><button type="button" id="bundo">やり直し</button><button type="button" id="bflip">左右を反転</button><button type="button" id="bkeep" aria-pressed="false">タップで残す</button></div>
-    <p class="hint">向きはどちらでも大丈夫です。反転すると船の文字も左右逆になります。</p>
-    <div class="mode"><button type="button" data-bm="photo" aria-pressed="true">写真のまま使う</button><button type="button" data-bm="color" aria-pressed="false">色だけ使う <span class="sw" id="bsw"></span></button></div>
+    <p class="hint">向きはどちらでも大丈夫です。反転すると写っている文字も左右逆になります。</p>
+    </div>
+    <p class="hint" id="bpickui" hidden>選んだ色 <span class="sw" id="bpsw"></span></p>
+    <div class="mode" id="bmodeui"><button type="button" data-bm="photo" aria-pressed="true">写真のまま使う</button><button type="button" data-bm="color" aria-pressed="false">色だけ使う <span class="sw" id="bsw"></span></button></div>
     <canvas id="bprev" width="640" height="260"></canvas>
-    <button class="primary" id="bsave" type="button">このボートにする</button>
+    <button class="primary" id="bsave" type="button">これにする</button>
   </div>
 </div>
 
@@ -1097,14 +1106,19 @@ function drawAngler(x, y, s, dim, wl, reach){
   if (u < 0.95) lure = [tx - 2, ty + 7];
   else if (u < 1.9) { var q = (u - 0.95) / 0.95; lure = [tx + (far - tx) * q, ty + (wl - ty) * q - 26 * Math.sin(Math.PI * q)]; }
   if (u >= 1.9 && u < 2.5) splash = (u - 1.9) / 0.6;
+  var RODC = gear.rod || DK, WEAR = gear.wear || "#F08A24";
   cx.save(); cx.translate(x, y); cx.scale(s * 1.3, s * 1.3); cx.globalAlpha = dim; cx.lineCap = "round";
+  // 足もとの道具(写真から): タモは立てかけ、クーラーとバッカンは地面に置く
+  if (gear.tamo) gearFit(gear.tamo, -21, 0.5, 13, 27);
+  if (gear.cooler) gearFit(gear.cooler, -16, 0.5, 11, 9);
+  if (gear.bakkan) gearFit(gear.bakkan, -8.5, 0.5, 8, 7);
   cx.fillStyle = DK; cx.fillRect(-3.4, -11, 2.6, 11); cx.fillRect(0.4, -11, 2.6, 11);                   // 脚
-  cx.fillStyle = "#F08A24"; cx.fillRect(-4.2, -22, 8, 12);                                              // 胴(ライフジャケット)
+  cx.fillStyle = WEAR; cx.fillRect(-4.2, -22, 8, 12);                                                   // 胴(ライフジャケット)
   cx.fillStyle = "#E9C9A6"; cx.beginPath(); cx.arc(-0.2, -25.6, 3.4, 0, 7); cx.fill();
   cx.fillStyle = DK; cx.fillRect(-4, -29.6, 7.6, 2.2);                                                  // 帽子
-  cx.strokeStyle = "#F08A24"; cx.lineWidth = 2.2; cx.beginPath(); cx.moveTo(1.5, -20); cx.lineTo(hx, hy); cx.stroke();   // 腕
-  cx.strokeStyle = DK; cx.lineWidth = 1.1; cx.beginPath(); cx.moveTo(hx - 3 * Math.cos(a), hy + 3 * Math.sin(a)); cx.lineTo(hx + L * 0.45 * Math.cos(a), hy - L * 0.45 * Math.sin(a)); cx.stroke();
-  cx.lineWidth = 0.7; cx.beginPath(); cx.moveTo(hx + L * 0.45 * Math.cos(a), hy - L * 0.45 * Math.sin(a)); cx.lineTo(tx, ty); cx.stroke();
+  cx.strokeStyle = WEAR; cx.lineWidth = 2.2; cx.beginPath(); cx.moveTo(1.5, -20); cx.lineTo(hx, hy); cx.stroke();   // 腕
+  cx.strokeStyle = RODC; cx.lineWidth = 1.1; cx.beginPath(); cx.moveTo(hx - 3 * Math.cos(a), hy + 3 * Math.sin(a)); cx.lineTo(hx + L * 0.45 * Math.cos(a), hy - L * 0.45 * Math.sin(a)); cx.stroke();
+  cx.lineWidth = 0.7; cx.strokeStyle = RODC; cx.beginPath(); cx.moveTo(hx + L * 0.45 * Math.cos(a), hy - L * 0.45 * Math.sin(a)); cx.lineTo(tx, ty); cx.stroke();
   cx.lineWidth = 0.35; cx.strokeStyle = "rgba(240,244,246,.9)"; cx.beginPath(); cx.moveTo(tx, ty);                                  // 糸
   if (lure) cx.lineTo(lure[0], lure[1]); else cx.quadraticCurveTo((tx + enter) / 2, (ty + wl) / 2 + 5, enter, wl);
   cx.stroke();
@@ -1531,10 +1545,46 @@ function boatThumb(){
   $("breset").hidden = !myBoat.mode;
   var keep = cx; cx = g; try { drawBoat(96, 82, 0, 1.15, 1, false); } finally { cx = keep; }
 }
+/* ---------- わたしの釣り道具(磯・漁港の釣り人) ---------- */
+var gear = {};
+var GEAR = [{ k: "rod", name: "竿の色", pick: true, hint: "写真の中の竿をタップすると、その色になります。" },
+  { k: "wear", name: "ライフジャケット", pick: true, hint: "写真の中のライフジャケットをタップすると、その色になります。" },
+  { k: "bakkan", name: "バッカン" }, { k: "tamo", name: "タモ" }, { k: "cooler", name: "クーラー" }];
+function gearFit(img, xc, bottom, mw, mh){ var w = mw, h = w * img.height / img.width; if (h > mh) { h = mh; w = h * img.width / img.height; } cx.drawImage(img, xc - w / 2, bottom - h, w, h); }
+function loadGear(){
+  var s = load("shukko:gear", {}) || {}; gear = { rod: s.rod || null, wear: s.wear || null };
+  ["bakkan", "tamo", "cooler"].forEach(function(k){ if (s[k]) { var im = new Image(); im.onload = function(){ gear[k] = im; gearChips(); if (viewDays.length) drawSea(true); }; im.src = s[k]; } });
+  gearChips();
+}
+function gearChips(){
+  var box = $("gears"), s = load("shukko:gear", {}) || {}; box.textContent = "";
+  GEAR.forEach(function(G){
+    var b = el("button", "gear"); b.type = "button"; var c = document.createElement("canvas"); c.width = 112; c.height = 80; b.appendChild(c); b.appendChild(el("span", null, G.name));
+    var g = c.getContext("2d");
+    if (G.pick) { g.fillStyle = gear[G.k] || (G.k === "rod" ? "#22313A" : "#F08A24"); if (G.k === "rod") { g.save(); g.translate(56, 40); g.rotate(-0.6); g.fillRect(-48, -4, 96, 8); g.restore(); } else { g.fillRect(28, 8, 56, 64); } }
+    else if (gear[G.k] && gear[G.k].width) { var im = gear[G.k], w = 104, h = w * im.height / im.width; if (h > 76) { h = 76; w = h * im.width / im.height; } g.drawImage(im, 56 - w / 2, 78 - h, w, h); }
+    else { g.fillStyle = "#93A8AD"; g.font = "bold 34px sans-serif"; g.textAlign = "center"; g.fillText("+", 56, 52); }
+    b.addEventListener("click", function(){ openEditor(G.k); });
+    box.appendChild(b);
+    if (s[G.k]) { var x = el("button", "x", "×"); x.type = "button"; x.setAttribute("aria-label", G.name + "を外す");
+      x.addEventListener("click", function(ev){ ev.stopPropagation(); var t = load("shukko:gear", {}) || {}; delete t[G.k]; save("shukko:gear", t); loadGear(); if (viewDays.length) drawSea(true); }); b.appendChild(x); }
+  });
+}
+var openEditor = null;
 (function(){
-  var W0 = 0, H0 = 0, src = null, mask = null, hist = [], flip = false, mode = "photo", keepMode = false, colr = "#D9463B", cut = null;
+  var W0 = 0, H0 = 0, src = null, mask = null, hist = [], flip = false, mode = "photo", keepMode = false, colr = "#D9463B", cut = null, slot = "boat";
   var work = $("bwork"), wg = work.getContext("2d", { willReadFrequently: true });
-  $("bshoot").addEventListener("click", function(){ $("bfile").value = ""; $("bfile").click(); });
+  openEditor = function(k){ slot = k; $("bfile").value = ""; $("bfile").click(); };
+  $("bshoot").addEventListener("click", function(){ openEditor("boat"); });
+  function gdef(){ for (var i = 0; i < GEAR.length; i++) if (GEAR[i].k === slot) return GEAR[i]; return null; }
+  function setupUI(){
+    var G = gdef(), pick = !!(G && G.pick);
+    $("btitle").textContent = G ? "わたしの" + G.name.replace("の色", "") : "わたしのボート";
+    $("bhint").textContent = pick ? G.hint : "背景は自動で消しています。消し残しは、その場所をタップすると消えます。消しすぎたら「やり直し」を押してください。";
+    $("bcutui").style.display = pick ? "none" : "contents"; $("bpickui").hidden = !pick; $("bmodeui").hidden = !!G;
+    if (G) mode = pick ? "color" : "photo";
+    else { mode = "photo"; Array.prototype.forEach.call(document.querySelectorAll("[data-bm]"), function(o){ o.setAttribute("aria-pressed", String(o.dataset.bm === "photo")); }); }
+  }
   $("breset").addEventListener("click", function(){ try { localStorage.removeItem("shukko:myboat"); } catch (e) {} loadMyBoat(); if (viewDays.length) drawSea(true); });
   $("bcancel").addEventListener("click", function(){ $("bsheet").hidden = true; });
   $("bfile").addEventListener("change", function(){
@@ -1544,7 +1594,10 @@ function boatThumb(){
       var sc = Math.min(1, 480 / Math.max(im.width, im.height)); W0 = Math.round(im.width * sc); H0 = Math.round(im.height * sc);
       work.width = W0; work.height = H0; wg.clearRect(0, 0, W0, H0); wg.drawImage(im, 0, 0, W0, H0); URL.revokeObjectURL(url);
       src = wg.getImageData(0, 0, W0, H0); flip = false; hist = []; keepMode = false; $("bkeep").setAttribute("aria-pressed", "false");
-      autoMask(); $("bsheet").hidden = false; work.scrollIntoView({ block: "nearest" });
+      setupUI();
+      if (gdef() && gdef().pick) { mask = null; colr = gear[slot] || (slot === "rod" ? "#22313A" : "#F08A24"); $("bpsw").style.background = colr; $("bsave").disabled = false; preview(); }
+      else autoMask();
+      $("bsheet").hidden = false; work.scrollIntoView({ block: "nearest" });
     };
     im.onerror = function(){ URL.revokeObjectURL(url); alert("写真を読み込めませんでした。別の写真で試してください。"); };
     im.src = url;
@@ -1573,6 +1626,11 @@ function boatThumb(){
     }
   }
   work.addEventListener("click", function(ev){
+    var G = gdef();
+    if (G && G.pick && src) { var rc0 = work.getBoundingClientRect(), px = Math.floor((ev.clientX - rc0.left) / rc0.width * W0), py = Math.floor((ev.clientY - rc0.top) / rc0.height * H0), tr = 0, tg = 0, tb = 0, n = 0;
+      for (var yy = py - 2; yy <= py + 2; yy++) for (var xq = px - 2; xq <= px + 2; xq++) if (xq >= 0 && yy >= 0 && xq < W0 && yy < H0) { var j = (yy * W0 + xq) * 4; tr += src.data[j]; tg += src.data[j + 1]; tb += src.data[j + 2]; n++; }
+      if (n) { colr = "#" + ((1 << 24) + (Math.round(tr / n) << 16) + (Math.round(tg / n) << 8) + Math.round(tb / n)).toString(16).slice(1); $("bpsw").style.background = colr; preview(); }
+      return; }
     if (!mask) return; var rc = work.getBoundingClientRect();
     var x = Math.floor((ev.clientX - rc.left) / rc.width * W0), y = Math.floor((ev.clientY - rc.top) / rc.height * H0); if (flip) x = W0 - 1 - x;
     if (x < 0 || y < 0 || x >= W0 || y >= H0) return;
@@ -1623,6 +1681,7 @@ function boatThumb(){
     return "#" + ((1 << 24) + (Math.round(tr / cnt) << 16) + (Math.round(tg / cnt) << 8) + Math.round(tb / cnt)).toString(16).slice(1);
   }
   function preview(){
+    if (gdef()) return previewGear();
     var c = $("bprev"), g = c.getContext("2d"), W = c.width, H = c.height, hor = H * 0.62;
     var sky = g.createLinearGradient(0, 0, 0, hor); sky.addColorStop(0, "#9ccbe6"); sky.addColorStop(1, "#d9eef6"); g.fillStyle = sky; g.fillRect(0, 0, W, hor);
     g.fillStyle = "#2f7fa6"; g.fillRect(0, hor, W, H - hor);
@@ -1633,7 +1692,26 @@ function boatThumb(){
     g.fillStyle = "rgba(47,127,166,.55)"; g.fillRect(0, hor + 8, W, H);
     $("bsave").disabled = mode === "photo" && !cut;
   }
+  function previewGear(){
+    var c = $("bprev"), g = c.getContext("2d"), W = c.width, H = c.height, hor = H * 0.5, G = gdef();
+    var sky = g.createLinearGradient(0, 0, 0, hor); sky.addColorStop(0, "#9ccbe6"); sky.addColorStop(1, "#d9eef6"); g.fillStyle = sky; g.fillRect(0, 0, W, hor);
+    g.fillStyle = "#2f7fa6"; g.fillRect(0, hor, W, H - hor);
+    g.fillStyle = "#8f979b"; g.beginPath(); g.moveTo(0, hor + 50); g.lineTo(W * 0.62, hor + 50); g.lineTo(W * 0.66, H); g.lineTo(0, H); g.closePath(); g.fill();
+    var keep = cx, old = gear[slot], ax = W * 0.42, ay = hor + 50, s = 3.2, k = s * 1.3;
+    gear[slot] = G.pick ? colr : cut;
+    cx = g; try { if (!G.pick && !cut) { g.fillStyle = "#fff"; g.font = "bold 22px sans-serif"; g.textAlign = "center"; g.fillText("見つかりません。消し具合を下げてください", W / 2, 40); } drawAngler(ax, ay, s, 1, (hor + 60 - ay) / k, (W * 0.95 - ax) / k); }
+    finally { cx = keep; gear[slot] = old; }
+    $("bsave").disabled = !G.pick && !cut;
+  }
   $("bsave").addEventListener("click", function(){
+    if (gdef()) {
+      var t = load("shukko:gear", {}) || {};
+      if (gdef().pick) t[slot] = colr;
+      else { var kk = Math.min(1, 220 / Math.max(cut.width, cut.height)), cv2 = document.createElement("canvas"); cv2.width = Math.max(1, Math.round(cut.width * kk)); cv2.height = Math.max(1, Math.round(cut.height * kk)); cv2.getContext("2d").drawImage(cut, 0, 0, cv2.width, cv2.height); t[slot] = cv2.toDataURL("image/png"); }
+      save("shukko:gear", t);
+      if (!(load("shukko:gear", {}) || {})[slot]) { alert("保存できませんでした。"); return; }
+      $("bsheet").hidden = true; loadGear(); if (viewDays.length) drawSea(true); return;
+    }
     var rec = { mode: mode, col: colr };
     if (mode === "photo") { var k = Math.min(1, 360 / cut.width), t = document.createElement("canvas"); t.width = Math.round(cut.width * k); t.height = Math.round(cut.height * k); t.getContext("2d").drawImage(cut, 0, 0, t.width, t.height); rec.src = t.toDataURL("image/png"); }
     save("shukko:myboat", rec);
@@ -1641,7 +1719,7 @@ function boatThumb(){
     $("bsheet").hidden = true; loadMyBoat(); if (viewDays.length) drawSea(true);
   });
 })();
-loadMyBoat();
+loadMyBoat(); loadGear();
 
 /* ---------- 起動 ---------- */
 show(place, false);
